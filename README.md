@@ -1,6 +1,113 @@
 ![WechatIMG54679 (1).png](https://p3-juejin.byteimg.com/tos-cn-i-k3u1fbpfcp/22ca5c6850d946d692d59f8bb74c70ef~tplv-k3u1fbpfcp-jj-mark:0:0:0:0:q75.image#?w=1373&h=788&s=308447&e=png&b=3d7ab8)
 
-## 操作步骤
+## Find Job Plus：Agent Team 自动投简历系统
+
+本仓库已从单文件 Boss 直聘脚本重构为一个可扩展的 Agent Team 架构。新结构保留 Boss 直聘自动沟通能力，并新增牛客网适配骨架、职位过滤、简历优化、聊天管理和空闲浏览总结的模块边界。
+
+### Agent Team 架构
+
+核心入口是 `main.js`，实际能力拆到 `src/`：
+
+| 模块 | 责任 |
+| --- | --- |
+| `src/agents/agentTeam.js` | 协调平台登录、职位获取、过滤、简历优化、投递、消息回复和空闲浏览。 |
+| `src/agents/jobFilter.js` | 在调用 LLM 和投递前执行确定性过滤：薪资、招聘者活跃度、屏蔽关键词、公司黑名单。 |
+| `src/platforms/boss.js` | Boss 直聘 Selenium 适配器，封装登录、职位读取和发送打招呼消息。 |
+| `src/platforms/nowcoder.js` | 牛客网 Selenium 适配器骨架，封装登录、职位读取和投递入口，选择器需要按登录后页面校准。 |
+| `src/llm/openaiClient.js` | OpenAI 兼容 LLM 封装，负责简历优化、打招呼、聊天回复和市场总结。 |
+| `src/resumeStore.js` | 从配置路径读取本地简历文本。 |
+| `src/gui/server.js` | 本地 Web 控制台，显示命令输入、活跃平台、浏览器 URL、当前 agent 操作和日志。 |
+| `.codex/agents/*.toml` | 按 OpenAI Codex subagents 规范定义项目内子代理团队。 |
+
+### Codex Subagents 配置
+
+项目内已添加 `.codex/config.toml`：
+
+```toml
+[agents]
+max_threads = 6
+max_depth = 1
+```
+
+并按 OpenAI Codex custom agents 文件格式在 `.codex/agents/` 下定义 6 个子代理，每个文件都包含 `name`、`description`、`developer_instructions` 和 `model_reasoning_effort`：
+
+| 子代理 | 文件 | 负责范围 |
+| --- | --- | --- |
+| `platform-agent` | `.codex/agents/platform-agent.toml` | Boss/牛客平台适配器和 DOM 选择器。 |
+| `resume-agent` | `.codex/agents/resume-agent.toml` | 简历读取、简历定制和求职消息提示词。 |
+| `chat-agent` | `.codex/agents/chat-agent.toml` | HR 消息处理、回复草稿和人工接管边界。 |
+| `job-filter-agent` | `.codex/agents/job-filter-agent.toml` | 职位过滤规则和解释性跳过原因。 |
+| `gui-agent` | `.codex/agents/gui-agent.toml` | 本地控制台、状态面板、命令输入和日志。 |
+| `idle-market-agent` | `.codex/agents/idle-market-agent.toml` | 无投递/消息时的空闲浏览和市场总结。 |
+
+### 运行方式
+
+1. 安装依赖：
+
+```bash
+yarn install
+```
+
+2. 设置环境变量：
+
+```bash
+set OPENAI_API_KEY=你的 API Key
+set OPENAI_BASE_URL=https://api.openai.com/v1
+set RESUME_PATH=.\简历基本信息.txt
+set MIN_SALARY_K=15
+set MAX_SALARY_K=35
+set ACTIVE_WITHIN_DAYS=3
+set BLOCKED_KEYWORDS=外包,外派,驻场
+set MAX_APPLICATIONS_PER_RUN=20
+```
+
+3. 运行 Boss 直聘：
+
+```bash
+yarn start -- --platforms=boss
+```
+
+4. 同时运行 Boss 和牛客：
+
+```bash
+yarn start -- --platforms=boss,nowcoder
+```
+
+牛客网的登录与投递流程经常变化，`src/platforms/nowcoder.js` 中的 CSS/XPath 是适配骨架。首次使用前需要在登录后的真实页面校准选择器。
+
+5. 启动本地 GUI 控制台：
+
+```bash
+yarn start -- --platforms=boss --gui
+```
+
+默认地址是 `http://127.0.0.1:3210`，可通过 `GUI_PORT` 修改端口。控制台显示当前活跃平台、浏览器 URL、正在执行的 agent 操作、日志和用户命令输入框。
+
+### 测试
+
+```bash
+npm test
+```
+
+测试覆盖：
+
+- 薪资和活跃度解析；
+- 外包、外派、驻场、公司黑名单过滤；
+- Agent Team 在过滤通过后才调用 LLM 和投递；
+- 新消息自动回复流程；
+- 空闲浏览市场总结流程；
+- GUI 状态和 HTML 渲染；
+- Boss/牛客平台适配器共享接口；
+- `.codex/agents/*.toml` 是否满足 OpenAI Codex subagents 必填字段。
+
+### 安全边界
+
+- 不再在代码中硬编码 API Key，运行时从环境变量读取。
+- 过滤规则先于 LLM 调用和投递动作执行，避免浪费每日沟通次数。
+- 聊天 Agent 的职责是处理低风险常规回复；薪资谈判、证件材料、面试冲突、合同条款等需要用户确认。
+- 简历优化提示词要求不编造经历、不泄露无关隐私。
+
+## 原始操作步骤
 
 1. 点击链接获取自己免费的 apikey：[GPT-API-free 项目](https://gitcode.com/chatanywhere/gpt_api_free/overview)
 2. 全局搜索【你的 apiKey】字段，替换为你自己的 apikey

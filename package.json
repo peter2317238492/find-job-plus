@@ -1,13 +1,15 @@
 {
   "name": "gpt-job",
   "version": "1.0.0",
-  "main": "index.js",
+  "main": "main.js",
   "license": "MIT",
   "scripts": {
-    "start": "node ./main.js"
+    "start": "node ./main.js",
+    "test": "node --test"
   },
   "dependencies": {
     "openai": "^4.24.1",
+    "pdf-parse": "^2.4.5",
     "selenium-webdriver": "^4.16.0"
   }
 }

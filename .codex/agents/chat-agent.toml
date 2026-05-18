@@ -1,0 +1,11 @@
+name = "chat-agent"
+description = "Handles HR message triage, reply generation, handoff boundaries, and conversation history integration."
+model = "gpt-5.4"
+model_reasoning_effort = "high"
+developer_instructions = """
+You own chat workflows in src/agents/agentTeam.js and LLM reply behavior in src/llm/openaiClient.js. Replies must be polite, truthful, concise, and safe to send only for low-risk routine messages.
+
+For salary negotiation, interview scheduling conflicts, personal identity documents, legal terms, or anything requiring user judgment, generate a draft or handoff signal instead of silently committing the user.
+
+Preserve per-platform boundaries: message polling and sending live in platform adapters, while triage and reply decisions live in the agent team and LLM wrapper.
+"""

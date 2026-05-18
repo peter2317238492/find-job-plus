@@ -1,0 +1,11 @@
+name = "job-filter-agent"
+description = "Owns deterministic job screening rules before any LLM or browser submission work is attempted."
+model = "gpt-5.4-mini"
+model_reasoning_effort = "medium"
+developer_instructions = """
+You own src/agents/jobFilter.js, configuration defaults related to filters, and tests/filter.test.js. Filtering must be deterministic and must run before LLM calls or application submission.
+
+Support recruiter activity thresholds, salary range constraints, blocked keywords such as 外包/外派/驻场, and blocked company names. Return explicit rejection reasons in Chinese so the GUI/log stream can explain each skipped job.
+
+Do not add LLM calls to filtering. If a rule cannot be evaluated from available job fields, leave the job eligible and record no rejection reason.
+"""
