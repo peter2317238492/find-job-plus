@@ -5,6 +5,7 @@ const {
   createBossAdapter,
   createBossSearchUrl,
   isBossSecurityUrl,
+  parseBossJobsFromPageText,
   parseBossListCardText,
   resolveBossReturnUrl,
 } = require("../src/platforms/boss");
@@ -64,6 +65,32 @@ test("Boss adapter parses current list-card text into job fields", () => {
       description: "PMO实习生-国际搜索\n300-350元/天\n3个月本科\n字节跳动\n上海·杨浦区·五角场",
     }
   );
+});
+
+test("Boss Chrome adapter parses multiple visible job cards from page text", () => {
+  const jobs = parseBossJobsFromPageText(
+    [
+      "前端开发实习生",
+      "200-300元/天",
+      "3个月本科",
+      "靠谱科技",
+      "上海·浦东新区",
+      "今日活跃",
+      "",
+      "Node.js 实习生",
+      "20-30K",
+      "经验不限本科",
+      "自动化科技",
+      "苏州·工业园区",
+      "3日内活跃",
+    ].join("\n")
+  );
+
+  assert.equal(jobs.length, 2);
+  assert.equal(jobs[0].id, "boss-1");
+  assert.equal(jobs[0].title, "前端开发实习生");
+  assert.equal(jobs[0].company, "靠谱科技");
+  assert.equal(jobs[1].title, "Node.js 实习生");
 });
 
 test("Boss adapter recognizes official security verification pages", () => {

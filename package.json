@@ -9,7 +9,6 @@
   },
   "dependencies": {
     "openai": "^4.24.1",
-    "pdf-parse": "^2.4.5",
-    "selenium-webdriver": "^4.16.0"
+    "pdf-parse": "^2.4.5"
   }
 }

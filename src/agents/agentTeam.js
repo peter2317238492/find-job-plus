@@ -13,6 +13,10 @@ class JobApplicationAgentTeam {
 
   async runOnce(platformName) {
     const platform = this.#getPlatform(platformName);
+    if (platform.kind === "profile-maintenance") {
+      return this.maintainProfile(platformName);
+    }
+
     this.#emit({
       type: "platform:active",
       platform: platformName,
@@ -148,10 +152,61 @@ class JobApplicationAgentTeam {
     };
   }
 
+  async maintainProfile(platformName) {
+    const platform = this.#getPlatform(platformName);
+    if (typeof platform.maintainProfile !== "function") {
+      throw new Error(`Platform does not support profile maintenance: ${platformName}`);
+    }
+
+    this.#emit({
+      type: "platform:active",
+      platform: platformName,
+      url: platform.startUrl,
+    });
+    await this.#ensurePlatformLoggedIn(platformName, platform);
+
+    const resume = await this.resumeStore.load();
+    this.#emit({
+      type: "agent:operation",
+      agent: "resume-agent",
+      operation: `为 ${platformName} 生成个人资料维护草稿`,
+    });
+    const profilePatch =
+      typeof this.llm.generateLinkedInProfilePatch === "function"
+        ? await this.llm.generateLinkedInProfilePatch({ resume })
+        : { summary: resume };
+
+    this.#emit({
+      type: "agent:operation",
+      agent: "platform-agent",
+      operation: `维护 ${platformName} 个人资料`,
+    });
+    const maintenance = await platform.maintainProfile({ resume, profilePatch });
+    this.#emit({
+      type: "log",
+      level: "info",
+      message:
+        maintenance.status === "unchanged"
+          ? `${platformName} 个人资料无需更新`
+          : `已维护 ${platformName} 个人资料`,
+    });
+
+    return {
+      status: "profile_maintained",
+      profilePatch,
+      maintenance,
+    };
+  }
+
   async run(platformNames) {
     const results = [];
     for (const platformName of platformNames) {
       const platform = this.#getPlatform(platformName);
+      if (platform.kind === "profile-maintenance") {
+        results.push(await this.maintainProfile(platformName));
+        continue;
+      }
+
       this.#emit({
         type: "platform:active",
         platform: platformName,

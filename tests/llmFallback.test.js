@@ -27,3 +27,15 @@ test("createJobAssistant uses a truthful template assistant when no API key is c
   assert.match(greeting, /2026年6月/);
   assert.doesNotMatch(greeting, /undefined|null/);
 });
+
+test("template assistant generates LinkedIn profile patch without credentials or private fields", async () => {
+  const assistant = createJobAssistant({ apiKey: "" });
+  const patch = await assistant.generateLinkedInProfilePatch({
+    resume: "熟悉 React、TypeScript、Node.js 和 OpenAI API，有自动化项目经历。",
+  });
+
+  assert.match(patch.headline, /Frontend Developer/);
+  assert.match(patch.about, /React/);
+  assert.deepEqual(patch.skills, ["TypeScript", "React", "Node.js", "OpenAI API"]);
+  assert.doesNotMatch(JSON.stringify(patch), /password|LINKEDIN_PASSWORD|手机号|身份证/i);
+});

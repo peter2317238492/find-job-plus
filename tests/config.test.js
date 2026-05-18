@@ -7,12 +7,14 @@ test("loadConfig reads internship target filters from environment", () => {
     REQUIRED_INTERNSHIP: process.env.REQUIRED_INTERNSHIP,
     TARGET_START_MONTH: process.env.TARGET_START_MONTH,
     MAX_APPLICATIONS_PER_RUN: process.env.MAX_APPLICATIONS_PER_RUN,
+    LINKEDIN_PROFILE_URL: process.env.LINKEDIN_PROFILE_URL,
   };
 
   process.env.ALLOWED_CITIES = "上海,苏州";
   process.env.REQUIRED_INTERNSHIP = "true";
   process.env.TARGET_START_MONTH = "2026-06";
   process.env.MAX_APPLICATIONS_PER_RUN = "500";
+  process.env.LINKEDIN_PROFILE_URL = "https://www.linkedin.com/in/example/";
 
   delete require.cache[require.resolve("../src/config")];
   const { loadConfig } = require("../src/config");
@@ -22,6 +24,7 @@ test("loadConfig reads internship target filters from environment", () => {
   assert.equal(config.filters.requiredInternship, true);
   assert.equal(config.filters.targetStartMonth, "2026-06");
   assert.equal(config.limits.maxApplicationsPerRun, 500);
+  assert.equal(config.linkedin.profileUrl, "https://www.linkedin.com/in/example/");
 
   for (const [key, value] of Object.entries(previous)) {
     if (value === undefined) {
@@ -59,4 +62,17 @@ test("loadCodexOpenAIConfig reads OpenAI base URL and API key without logging se
     baseURL: "https://example.test/v1",
     apiKey: "sk-test",
   });
+});
+
+test("resolveDefaultResumePath falls back to the checked-in PDF resume", async () => {
+  const fs = require("node:fs/promises");
+  const os = require("node:os");
+  const path = require("node:path");
+  const { resolveDefaultResumePath } = require("../src/config");
+
+  const dir = await fs.mkdtemp(path.join(os.tmpdir(), "find-job-plus-resume-"));
+  const pdfPath = path.join(dir, "在线简历.pdf");
+  await fs.writeFile(pdfPath, Buffer.from("%PDF mocked"));
+
+  assert.equal(resolveDefaultResumePath(dir), pdfPath);
 });

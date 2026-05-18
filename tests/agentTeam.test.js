@@ -312,3 +312,40 @@ test("agent team produces idle market research when no jobs or messages exist", 
     summary: "发现 2 个岗位，React 和自动化工具出现频繁。",
   });
 });
+
+test("agent team routes LinkedIn to profile maintenance instead of job application", async () => {
+  const calls = [];
+  const team = new JobApplicationAgentTeam({
+    platforms: {
+      linkedin: {
+        name: "linkedin",
+        kind: "profile-maintenance",
+        startUrl: "https://www.linkedin.com/feed/",
+        async login() {
+          calls.push("login");
+        },
+        async maintainProfile({ resume, profilePatch }) {
+          calls.push(`maintain:${profilePatch.headline}:${resume}`);
+          return { ok: true, status: "updated" };
+        },
+      },
+    },
+    resumeStore: { async load() { return "React Node.js resume"; } },
+    llm: {
+      async generateLinkedInProfilePatch({ resume }) {
+        calls.push(`patch:${resume}`);
+        return { headline: "Frontend Developer", about: resume, skills: ["React"] };
+      },
+    },
+    config: { filters: {}, limits: { maxApplicationsPerRun: 1 } },
+  });
+
+  const result = await team.runOnce("linkedin");
+
+  assert.equal(result.status, "profile_maintained");
+  assert.deepEqual(calls, [
+    "login",
+    "patch:React Node.js resume",
+    "maintain:Frontend Developer:React Node.js resume",
+  ]);
+});

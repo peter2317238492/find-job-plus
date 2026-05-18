@@ -1,5 +1,6 @@
 const path = require("node:path");
 const fs = require("node:fs/promises");
+const fsSync = require("node:fs");
 const os = require("node:os");
 
 const DEFAULT_CONFIG = {
@@ -7,7 +8,7 @@ const DEFAULT_CONFIG = {
   model: "gpt-4o-mini",
   baseURL: process.env.OPENAI_BASE_URL || "https://api.openai.com/v1",
   apiKey: process.env.OPENAI_API_KEY || "",
-  resumePath: process.env.RESUME_PATH || path.join(process.cwd(), "简历基本信息.txt"),
+  resumePath: process.env.RESUME_PATH || resolveDefaultResumePath(),
   filters: {
     minSalaryK: Number(process.env.MIN_SALARY_K || 0),
     maxSalaryK: Number(process.env.MAX_SALARY_K || 999),
@@ -24,6 +25,9 @@ const DEFAULT_CONFIG = {
   idleBrowsing: {
     enabled: process.env.IDLE_BROWSING_ENABLED === "true",
   },
+  linkedin: {
+    profileUrl: process.env.LINKEDIN_PROFILE_URL || "https://www.linkedin.com/in/me/",
+  },
 };
 
 function parseList(value) {
@@ -31,6 +35,20 @@ function parseList(value) {
     .split(",")
     .map((item) => item.trim())
     .filter(Boolean);
+}
+
+function resolveDefaultResumePath(cwd = process.cwd()) {
+  const textResume = path.join(cwd, "简历基本信息.txt");
+  if (fsSync.existsSync(textResume)) {
+    return textResume;
+  }
+
+  const pdfResume = path.join(cwd, "在线简历.pdf");
+  if (fsSync.existsSync(pdfResume)) {
+    return pdfResume;
+  }
+
+  return textResume;
 }
 
 function loadConfig(overrides = {}) {
@@ -48,6 +66,10 @@ function loadConfig(overrides = {}) {
     idleBrowsing: {
       ...DEFAULT_CONFIG.idleBrowsing,
       ...(overrides.idleBrowsing || {}),
+    },
+    linkedin: {
+      ...DEFAULT_CONFIG.linkedin,
+      ...(overrides.linkedin || {}),
     },
   };
 }
@@ -120,4 +142,5 @@ module.exports = {
   loadCodexOpenAIConfig,
   loadConfig,
   parseList,
+  resolveDefaultResumePath,
 };

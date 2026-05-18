@@ -1,11 +1,13 @@
 const { createBossAdapter } = require("./boss");
 const { createNowcoderAdapter } = require("./nowcoder");
+const { createLinkedInAdapter } = require("../platforms_chrome/linkedinAdapter");
 
 function createPlatformRegistry(options = {}) {
   const filters = options.filters || {};
   const adapters = {
     boss: createBossAdapter({ ...options, ...filters, ...(options.boss || {}) }),
     nowcoder: createNowcoderAdapter({ ...options, ...filters, ...(options.nowcoder || {}) }),
+    linkedin: createLinkedInAdapter({ ...options, ...(options.linkedin || {}) }),
   };
 
   return {

@@ -1,14 +1,7 @@
-const { OpenAI } = require("openai");
-
 class OpenAIJobAssistant {
   constructor({ apiKey, baseURL, model, client } = {}) {
     this.model = model || "gpt-4o-mini";
-    this.client =
-      client ||
-      new OpenAI({
-        apiKey,
-        baseURL,
-      });
+    this.client = client || createOpenAIClient({ apiKey, baseURL });
   }
 
   async generateResumePatch({ resume, job }) {
@@ -72,6 +65,24 @@ class OpenAIJobAssistant {
     ]);
   }
 
+  async generateLinkedInProfilePatch({ resume }) {
+    const content = await this.#complete([
+      {
+        role: "system",
+        content:
+          "你是 LinkedIn 个人资料维护 Agent。只基于用户本地简历生成真实、专业、可公开展示的资料草稿，不编造经历，不包含手机号、邮箱、证件号或住址。",
+      },
+      {
+        role: "user",
+        content:
+          `本地简历：\n${resume}\n\n` +
+          "请输出 JSON，字段为 headline、about、skills。headline 120 字以内；about 650 字以内；skills 为最多 10 个技能字符串。",
+      },
+    ]);
+
+    return parseLinkedInProfilePatch(content, resume);
+  }
+
   async #complete(messages) {
     const completion = await this.client.chat.completions.create({
       model: this.model,
@@ -110,6 +121,26 @@ class TemplateJobAssistant {
   async summarizeMarket({ jobs }) {
     return `本次浏览到 ${jobs.length} 个岗位。`;
   }
+
+  async generateLinkedInProfilePatch({ resume }) {
+    const resumeHint = String(resume || "").replace(/\s+/g, " ").trim();
+    const skills = [
+      "JavaScript",
+      "TypeScript",
+      "React",
+      "Node.js",
+      "Python",
+      "OpenAI API",
+      "Automation",
+    ].filter((skill) => resumeHint.toLowerCase().includes(skill.toLowerCase()));
+
+    return {
+      headline: inferTemplateHeadline(resumeHint),
+      about: resumeHint.slice(0, 650),
+      skills,
+      summary: resumeHint.slice(0, 650),
+    };
+  }
 }
 
 function createJobAssistant(options = {}) {
@@ -118,6 +149,14 @@ function createJobAssistant(options = {}) {
   }
 
   return new TemplateJobAssistant();
+}
+
+function createOpenAIClient({ apiKey, baseURL } = {}) {
+  const { OpenAI } = require("openai");
+  return new OpenAI({
+    apiKey,
+    baseURL,
+  });
 }
 
 function formatJob(job) {
@@ -130,9 +169,67 @@ function formatJob(job) {
   ].join("\n");
 }
 
+function parseLinkedInProfilePatch(content, fallbackResume = "") {
+  try {
+    const parsed = JSON.parse(extractJson(content));
+    return normalizeLinkedInProfilePatch(parsed, fallbackResume);
+  } catch (error) {
+    return normalizeLinkedInProfilePatch({ about: content }, fallbackResume);
+  }
+}
+
+function extractJson(content) {
+  const text = String(content || "").trim();
+  const fenced = text.match(/```(?:json)?\s*([\s\S]*?)```/i);
+  if (fenced) {
+    return fenced[1].trim();
+  }
+  const start = text.indexOf("{");
+  const end = text.lastIndexOf("}");
+  if (start >= 0 && end > start) {
+    return text.slice(start, end + 1);
+  }
+  return text;
+}
+
+function normalizeLinkedInProfilePatch(value, fallbackResume = "") {
+  const about = String(value.about || value.summary || fallbackResume || "")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, 650);
+  const headline = String(value.headline || inferTemplateHeadline(about))
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, 120);
+  const skills = Array.isArray(value.skills)
+    ? value.skills.map((skill) => String(skill).trim()).filter(Boolean).slice(0, 10)
+    : [];
+
+  return {
+    headline,
+    about,
+    skills,
+    summary: about,
+  };
+}
+
+function inferTemplateHeadline(text) {
+  if (/React|Vue|前端|TypeScript|JavaScript/i.test(text)) {
+    return "Frontend Developer | React, TypeScript, Web Automation";
+  }
+  if (/AI|LLM|Agent|机器学习|算法/i.test(text)) {
+    return "AI Application Developer | LLM, Automation, Data";
+  }
+  return "Software Developer";
+}
+
 module.exports = {
   createJobAssistant,
+  createOpenAIClient,
+  extractJson,
   OpenAIJobAssistant,
+  parseLinkedInProfilePatch,
   TemplateJobAssistant,
   formatJob,
+  normalizeLinkedInProfilePatch,
 };

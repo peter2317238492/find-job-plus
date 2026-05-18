@@ -20,7 +20,11 @@ async function main() {
     console.log(`GUI console: ${url}`);
   }
 
-  const registry = createPlatformRegistry({ browser: config.browser, filters: config.filters });
+  const registry = createPlatformRegistry({
+    browser: config.browser,
+    filters: config.filters,
+    linkedin: config.linkedin,
+  });
   const llm = createJobAssistant({
     apiKey: config.apiKey,
     baseURL: config.baseURL,
