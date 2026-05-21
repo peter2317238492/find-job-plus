@@ -3,6 +3,7 @@ function createInitialGuiState() {
     activePlatform: "",
     browserUrl: "",
     currentOperation: null,
+    guiTasks: [],
     commands: [],
     logs: [],
   };
@@ -19,6 +20,22 @@ function applyAgentEvent(state, event) {
       agent: event.agent,
       operation: event.operation,
     };
+  }
+
+  if (event.type && event.type.startsWith("gui:task:")) {
+    const task = {
+      ...(event.task || {}),
+      status: event.type.replace("gui:task:", ""),
+      at: event.at || new Date().toISOString(),
+    };
+    state.guiTasks.unshift(task);
+    state.guiTasks = state.guiTasks.slice(0, 20);
+    if (task.status === "started") {
+      state.currentOperation = {
+        agent: "computer-use-executor",
+        operation: task.operation,
+      };
+    }
   }
 
   if (event.type === "command") {
@@ -90,11 +107,27 @@ function renderDashboardHtml(state) {
         <dt>当前操作</dt><dd>${escapeHtml(operation.operation || "等待任务")}</dd>
       </dl>
       <h2 style="margin-top: 20px;">日志</h2>
+      <h2 style="margin-top: 20px;">GUI 队列</h2>
+      ${renderGuiTasks(state.guiTasks)}
+      <h2 style="margin-top: 20px;">日志</h2>
       ${renderLogs(state.logs)}
     </section>
   </main>
 </body>
 </html>`;
+}
+
+function renderGuiTasks(tasks) {
+  if (!tasks.length) {
+    return '<p class="muted">暂无 GUI 任务</p>';
+  }
+
+  return tasks
+    .map(
+      (task) =>
+        `<div class="log"><strong>${escapeHtml(task.status)}</strong> ${escapeHtml(task.platform || "")} ${escapeHtml(task.operation || "")}<div class="muted">${escapeHtml(task.at)}</div></div>`
+    )
+    .join("");
 }
 
 function renderCommands(commands) {
@@ -132,4 +165,5 @@ module.exports = {
   applyAgentEvent,
   createInitialGuiState,
   renderDashboardHtml,
+  renderGuiTasks,
 };

@@ -1,13 +1,25 @@
 const { isJobAllowed } = require("./jobFilter");
+const { createInlineGuiExecutor } = require("../gui/computerUseExecutor");
 
 class JobApplicationAgentTeam {
-  constructor({ platforms, resumeStore, llm, config, logger = console, eventSink = () => {} }) {
+  constructor({
+    platforms,
+    resumeStore,
+    llm,
+    config,
+    logger = console,
+    eventSink = () => {},
+    guiExecutor,
+    resumeRenderer,
+  }) {
     this.platforms = platforms;
     this.resumeStore = resumeStore;
     this.llm = llm;
     this.config = config || {};
     this.logger = logger;
     this.eventSink = eventSink;
+    this.guiExecutor = guiExecutor || createInlineGuiExecutor();
+    this.resumeRenderer = resumeRenderer;
     this.applicationCount = 0;
   }
 
@@ -33,7 +45,10 @@ class JobApplicationAgentTeam {
       agent: "platform-agent",
       operation: `读取 ${platformName} 下一个岗位`,
     });
-    const job = await platform.getNextJob();
+    const job = await this.#runGuiTask(platformName, {
+      operation: "getNextJob",
+      run: () => platform.getNextJob(),
+    });
     if (!job) {
       return { status: "no_job" };
     }
@@ -47,7 +62,11 @@ class JobApplicationAgentTeam {
     if (!decision.allowed) {
       this.logger.info?.(`跳过岗位 ${job.title || job.id}: ${decision.reasons.join("; ")}`);
       if (typeof platform.discardCurrentJob === "function") {
-        await platform.discardCurrentJob(job, decision);
+        await this.#runGuiTask(platformName, {
+          operation: "discardCurrentJob",
+          target: job.title || job.id,
+          run: () => platform.discardCurrentJob(job, decision),
+        });
       }
       return {
         status: "skipped",
@@ -63,28 +82,42 @@ class JobApplicationAgentTeam {
       operation: `为岗位 ${job.title || job.id} 定制简历和问候语`,
     });
     const resumePatch = await this.llm.generateResumePatch({ resume, job });
+    const renderedResume = await this.#renderResume({ platformName, resume, job, resumePatch });
     const greeting = await this.llm.generateGreeting({ resume, resumePatch, job });
     this.#emit({
       type: "agent:operation",
-      agent: "platform-agent",
+      agent: "computer-use-executor",
       operation: `提交岗位 ${job.title || job.id}`,
     });
-    const application = await platform.submitApplication(job, {
-      greeting,
-      resumePatch,
+    const application = await this.#runGuiTask(platformName, {
+      operation: "submitApplication",
+      target: job.title || job.id,
+      priority: 10,
+      run: () =>
+        platform.submitApplication(job, {
+          greeting,
+          resumePatch,
+          renderedResume,
+        }),
     });
 
-    this.applicationCount += 1;
+    const awaitingUserAction = application?.status === "awaiting_user_action";
+    if (!awaitingUserAction) {
+      this.applicationCount += 1;
+    }
     this.#emit({
       type: "log",
       level: "info",
-      message: `已投递 ${job.title || job.id}`,
+      message: awaitingUserAction
+        ? `已准备 ${job.title || job.id}，等待用户确认投递`
+        : `已投递 ${job.title || job.id}`,
     });
 
     return {
-      status: "applied",
+      status: awaitingUserAction ? "prepared" : "applied",
       job,
       resumePatch,
+      renderedResume,
       greeting,
       application,
     };
@@ -97,23 +130,42 @@ class JobApplicationAgentTeam {
       agent: "chat-agent",
       operation: `检查 ${platformName} 新消息`,
     });
-    const messages = await platform.checkMessages();
+    const messages = await this.#runGuiTask(platformName, {
+      operation: "checkMessages",
+      run: () => platform.checkMessages(),
+    });
 
     if (!messages.length) {
       return { status: "no_messages" };
     }
 
     const resume = await this.resumeStore.load();
+    const replyDrafts = await Promise.all(
+      messages.map(async (message) => {
+        this.#emit({
+          type: "agent:operation",
+          agent: "chat-agent",
+          operation: `回复会话 ${message.threadId}`,
+        });
+        const reply = await this.llm.generateChatReply({ resume, message });
+        return { message, reply };
+      })
+    );
+
     const replies = [];
-    for (const message of messages) {
+    for (const { message, reply } of replyDrafts) {
       this.#emit({
         type: "agent:operation",
-        agent: "chat-agent",
-        operation: `回复会话 ${message.threadId}`,
+        agent: "computer-use-executor",
+        operation: `发送会话 ${message.threadId}`,
       });
-      const reply = await this.llm.generateChatReply({ resume, message });
       if (typeof platform.sendMessage === "function") {
-        await platform.sendMessage(message.threadId, reply);
+        await this.#runGuiTask(platformName, {
+          operation: "sendMessage",
+          target: message.threadId,
+          priority: 10,
+          run: () => platform.sendMessage(message.threadId, reply),
+        });
       }
       replies.push({ threadId: message.threadId, reply });
     }
@@ -135,7 +187,10 @@ class JobApplicationAgentTeam {
       agent: "idle-market-agent",
       operation: `浏览 ${platformName} 市场信息`,
     });
-    const jobs = await platform.browseMarket();
+    const jobs = await this.#runGuiTask(platformName, {
+      operation: "browseMarket",
+      run: () => platform.browseMarket(),
+    });
     if (!jobs.length) {
       return { status: "no_market_data" };
     }
@@ -181,7 +236,12 @@ class JobApplicationAgentTeam {
       agent: "platform-agent",
       operation: `维护 ${platformName} 个人资料`,
     });
-    const maintenance = await platform.maintainProfile({ resume, profilePatch });
+    const maintenance = await this.#runGuiTask(platformName, {
+      operation: "maintainProfile",
+      target: platformName,
+      priority: 10,
+      run: () => platform.maintainProfile({ resume, profilePatch }),
+    });
     this.#emit({
       type: "log",
       level: "info",
@@ -259,8 +319,46 @@ class JobApplicationAgentTeam {
       agent: "platform-agent",
       operation: `登录并打开 ${platformName}`,
     });
-    await platform.login();
+    await this.#runGuiTask(platformName, {
+      operation: "login",
+      target: platform.startUrl,
+      priority: 20,
+      run: () => platform.login(),
+    });
     this.loggedInPlatforms.add(platformName);
+  }
+
+  async #runGuiTask(platformName, task) {
+    return this.guiExecutor.enqueue({
+      platform: platformName,
+      ...task,
+    });
+  }
+
+  async #renderResume({ platformName, resume, job, resumePatch }) {
+    if (!this.resumeRenderer || typeof this.resumeRenderer.render !== "function") {
+      return null;
+    }
+
+    this.#emit({
+      type: "agent:operation",
+      agent: "resume-agent",
+      operation: `生成 ${job.title || job.id} 的 Typst 简历`,
+    });
+    const rendered = await this.resumeRenderer.render({
+      platform: platformName,
+      resume,
+      job,
+      resumePatch,
+    });
+    if (rendered) {
+      Object.assign(resumePatch, {
+        typstPath: rendered.typstPath,
+        pdfPath: rendered.pdfPath,
+        compileStatus: rendered.compileStatus,
+      });
+    }
+    return rendered;
   }
 
   #emit(event) {

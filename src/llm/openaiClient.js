@@ -9,18 +9,17 @@ class OpenAIJobAssistant {
       {
         role: "system",
         content:
-          "你是简历优化 Agent。只基于用户提供的简历和岗位描述，输出适配该岗位的简历摘要，不编造经历，不泄露无关隐私。",
+          "你是简历优化 Agent。只基于用户提供的简历和岗位描述，输出适配该岗位的简历内容，不编造经历、教育、公司、项目、技能或量化结果，不泄露无关隐私。",
       },
       {
         role: "user",
-        content: `原始简历：\n${resume}\n\n岗位：\n${formatJob(job)}\n\n请输出 120 字以内的中文定制摘要。`,
+        content:
+          `原始简历：\n${resume}\n\n岗位：\n${formatJob(job)}\n\n` +
+          "请输出 JSON，字段为 summary、highlights、skills、projects。summary 120 字以内；highlights 最多 5 条；skills 只保留原简历能支持且岗位相关的技能；projects 最多 3 个，每个含 name、role、period、tech、description、bullets。无法从原简历确认的内容留空或省略。",
       },
     ]);
 
-    return {
-      summary: content,
-      resumeText: content,
-    };
+    return parseResumePatch(content, resume, job);
   }
 
   async generateGreeting({ resume, resumePatch, job }) {
@@ -100,6 +99,9 @@ class TemplateJobAssistant {
       summary: `基于原始简历提炼与岗位相关经历，不编造经历。${resumeHint}`,
       resumeText: resumeHint,
       jobTitle: job.title || "",
+      highlights: [`根据原始简历中已有经历匹配 ${job.title || "目标岗位"}。`],
+      skills: inferSkillsFromText(`${resumeHint} ${job.description || ""}`),
+      projects: [],
     };
   }
 
@@ -178,6 +180,15 @@ function parseLinkedInProfilePatch(content, fallbackResume = "") {
   }
 }
 
+function parseResumePatch(content, fallbackResume = "", job = {}) {
+  try {
+    const parsed = JSON.parse(extractJson(content));
+    return normalizeResumePatch(parsed, fallbackResume, job);
+  } catch (error) {
+    return normalizeResumePatch({ summary: content }, fallbackResume, job);
+  }
+}
+
 function extractJson(content) {
   const text = String(content || "").trim();
   const fenced = text.match(/```(?:json)?\s*([\s\S]*?)```/i);
@@ -213,6 +224,70 @@ function normalizeLinkedInProfilePatch(value, fallbackResume = "") {
   };
 }
 
+function normalizeResumePatch(value, fallbackResume = "", job = {}) {
+  const summary = String(value.summary || value.resumeText || fallbackResume || "")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, 220);
+  const highlights = Array.isArray(value.highlights)
+    ? value.highlights.map(normalizeText).filter(Boolean).slice(0, 5)
+    : [];
+  const skills = Array.isArray(value.skills)
+    ? value.skills.map(normalizeText).filter(Boolean).slice(0, 12)
+    : [];
+  const projects = Array.isArray(value.projects)
+    ? value.projects.map(normalizeProject).filter(Boolean).slice(0, 3)
+    : [];
+
+  return {
+    summary,
+    resumeText: summary,
+    jobTitle: job.title || value.jobTitle || "",
+    highlights,
+    skills,
+    projects,
+  };
+}
+
+function normalizeProject(project) {
+  if (!project || typeof project !== "object") {
+    return null;
+  }
+
+  const normalized = {
+    name: normalizeText(project.name || project.title),
+    role: normalizeText(project.role || project.desc),
+    period: normalizeText(project.period),
+    tech: normalizeText(Array.isArray(project.tech) ? project.tech.join(", ") : project.tech),
+    description: normalizeText(project.description),
+    bullets: Array.isArray(project.bullets)
+      ? project.bullets.map(normalizeText).filter(Boolean).slice(0, 4)
+      : [],
+  };
+
+  return normalized.name || normalized.description || normalized.bullets.length ? normalized : null;
+}
+
+function inferSkillsFromText(text) {
+  const dictionary = [
+    "JavaScript",
+    "TypeScript",
+    "React",
+    "Vue",
+    "Node.js",
+    "Python",
+    "OpenAI API",
+    "LLM",
+    "Automation",
+  ];
+  const source = String(text || "").toLowerCase();
+  return dictionary.filter((skill) => source.includes(skill.toLowerCase()));
+}
+
+function normalizeText(value) {
+  return String(value || "").replace(/\s+/g, " ").trim();
+}
+
 function inferTemplateHeadline(text) {
   if (/React|Vue|前端|TypeScript|JavaScript/i.test(text)) {
     return "Frontend Developer | React, TypeScript, Web Automation";
@@ -228,8 +303,10 @@ module.exports = {
   createOpenAIClient,
   extractJson,
   OpenAIJobAssistant,
+  parseResumePatch,
   parseLinkedInProfilePatch,
   TemplateJobAssistant,
   formatJob,
   normalizeLinkedInProfilePatch,
+  normalizeResumePatch,
 };

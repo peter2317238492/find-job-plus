@@ -1,0 +1,86 @@
+name = "nowcoder-non-gui"
+description = "Nowcoder preset for non-GUI job parsing, screening, resume tailoring, dropdown resume-choice planning, outreach drafting, message triage, and market summaries."
+platforms = ["nowcoder"]
+gui = false
+agents = [
+  "manager-agent",
+  "platform-agent",
+  "job-filter-agent",
+  "resume-agent",
+  "chat-agent",
+  "idle-market-agent",
+]
+
+[queue]
+executor = "computer-use-executor"
+policy = "all_browser_dropdown_upload_and_submit_actions_must_be_enqueued"
+concurrency = 1
+
+[workflow]
+layout_note = "application-kit/site-layouts/nowcoder.md"
+candidate_goal = "2026-06 start, Shanghai/Suzhou internship, truthful fit against 在线简历.pdf"
+final_action_policy = "stop before 投递简历/确认投递 or any message send"
+
+[[workflow.roles]]
+agent = "manager-agent"
+responsibility = "Coordinate Nowcoder search/detail parsing, deterministic screening, resume PDF generation, dropdown resume selection, city selection, and final handoff through queued GUI tasks."
+
+[[workflow.roles]]
+agent = "platform-agent"
+responsibility = "Extract Nowcoder detail fields from visible text: job title, company, city list, degree, keywords, delivery window, duties, requirements, recruiter card, application modal labels, and resume dropdown options."
+
+[[workflow.roles]]
+agent = "job-filter-agent"
+responsibility = "Check city list for Shanghai/Suzhou, internship label, class-year/start-date compatibility, blocked keywords, salary if present, and explicit role mismatch before any resume tailoring."
+
+[[workflow.roles]]
+agent = "resume-agent"
+responsibility = "Create a Nowcoder-tailored Typst/PDF resume and short upload filename; decide whether the attachment should replace the online resume in the dropdown."
+
+[[workflow.roles]]
+agent = "chat-agent"
+responsibility = "Draft short application notes or recruiter messages only if Nowcoder asks for optional text; otherwise stay out of final submission."
+
+[[workflow.roles]]
+agent = "idle-market-agent"
+responsibility = "When no eligible job is ready, summarize similar Nowcoder internship postings and recurring requirements without touching the GUI."
+
+[[workflow.gui_tasks]]
+name = "open_nowcoder_target"
+executor = "computer-use-executor"
+payload = "Open Nowcoder tab or URL, wait for job detail page, and report login/security blockers."
+
+[[workflow.gui_tasks]]
+name = "capture_nowcoder_detail"
+executor = "computer-use-executor"
+payload = "Read visible job card, recruiter/company panel, duties, requirements, delivery date, and right-side apply button; do not submit."
+
+[[workflow.gui_tasks]]
+name = "open_nowcoder_apply_modal"
+executor = "computer-use-executor"
+payload = "Click 立即申请 only to open the application modal, then report modal fields and controls."
+
+[[workflow.gui_tasks]]
+name = "select_or_upload_nowcoder_resume"
+executor = "computer-use-executor"
+payload = "Open the 选择投递简历 dropdown, choose 上传附件简历 when available, upload the provided PDF, or report if only 在线简历 is selectable."
+
+[[workflow.gui_tasks]]
+name = "capture_nowcoder_required_fields"
+executor = "computer-use-executor"
+payload = "Read every required field in the application modal, including 微信号, 所在地, 实习时长, 志愿城市, 是否调剂, 期望工作地点, 招聘渠道, and current values."
+
+[[workflow.gui_tasks]]
+name = "fill_nowcoder_confirmed_fields"
+executor = "computer-use-executor"
+payload = "Fill only fields explicitly confirmed by manager-agent/user; do not guess or transmit unconfirmed sensitive contact details."
+
+[[workflow.gui_tasks]]
+name = "set_nowcoder_intent_city"
+executor = "computer-use-executor"
+payload = "Open 意向城市/志愿城市/期望工作地点 dropdowns and choose 上海 or 苏州 according to manager-agent instructions."
+
+[[workflow.gui_tasks]]
+name = "handoff_before_nowcoder_submit"
+executor = "computer-use-executor"
+payload = "Position the modal at 投递简历/确认投递 and report selected resume/city; do not click final submit without action-time confirmation."

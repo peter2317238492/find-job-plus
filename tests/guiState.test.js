@@ -36,6 +36,27 @@ test("GUI state records active platform, browser URL, operation, and logs", () =
   assert.equal(state.logs[0].message, "准备投递");
 });
 
+test("GUI state records computer-use executor queue events", () => {
+  const state = createInitialGuiState();
+
+  applyAgentEvent(state, {
+    type: "gui:task:started",
+    at: "2026-05-21T00:00:00.000Z",
+    task: {
+      id: "task-1",
+      platform: "boss",
+      operation: "submitApplication",
+    },
+  });
+
+  assert.deepEqual(state.currentOperation, {
+    agent: "computer-use-executor",
+    operation: "submitApplication",
+  });
+  assert.equal(state.guiTasks[0].status, "started");
+  assert.equal(state.guiTasks[0].platform, "boss");
+});
+
 test("dashboard HTML includes command input, active window, operation, and log areas", () => {
   const state = createInitialGuiState();
   applyAgentEvent(state, {
@@ -62,5 +83,6 @@ test("dashboard HTML includes command input, active window, operation, and log a
   assert.match(html, /https:\/\/www\.nowcoder\.com\/jobs\/recommend/);
   assert.match(html, /platform-agent/);
   assert.match(html, /读取牛客岗位/);
+  assert.match(html, /GUI 队列/);
   assert.match(html, /牛客选择器需要校准/);
 });

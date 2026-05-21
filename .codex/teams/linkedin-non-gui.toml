@@ -1,0 +1,76 @@
+name = "linkedin-non-gui"
+description = "LinkedIn preset for non-GUI job/profile planning, Easy Apply field analysis, resume tailoring, public-profile wording, skill selection, and safety review."
+platforms = ["linkedin"]
+gui = false
+agents = [
+  "manager-agent",
+  "platform-agent",
+  "job-filter-agent",
+  "resume-agent",
+  "chat-agent",
+]
+
+[queue]
+executor = "computer-use-executor"
+policy = "all_linkedin_search_easy_apply_upload_and_profile_save_actions_must_be_enqueued"
+concurrency = 1
+
+[workflow]
+layout_note = "application-kit/site-layouts/linkedin.md"
+candidate_goal = "2026-06 start, Shanghai/Suzhou internship or explicitly acceptable China remote internship, truthful fit against 在线简历.pdf"
+final_action_policy = "stop before Submit application, Easy Apply final review submit, recruiter messages, Follow/interest actions, or public profile save"
+
+[[workflow.roles]]
+agent = "manager-agent"
+responsibility = "Plan LinkedIn search/profile tasks, distinguish job application from profile maintenance, and enqueue all browser/form/upload actions for computer-use-executor."
+
+[[workflow.roles]]
+agent = "platform-agent"
+responsibility = "Parse LinkedIn search results and detail panes: title, company, location, work mode, job type, Easy Apply/company-site apply labels, description, qualifications, and modal fields."
+
+[[workflow.roles]]
+agent = "job-filter-agent"
+responsibility = "Reject non-internship/full-time-only postings, location mismatches unless China remote is acceptable, explicit class-year/start-date conflicts, and roles unsupported by the source resume."
+
+[[workflow.roles]]
+agent = "resume-agent"
+responsibility = "Generate LinkedIn-tailored resume patches and PDF filenames for Easy Apply; never add unsupported technologies or credentials."
+
+[[workflow.roles]]
+agent = "chat-agent"
+responsibility = "Draft optional recruiter notes only when the LinkedIn flow exposes a text field; do not send without final confirmation."
+
+[[workflow.gui_tasks]]
+name = "run_linkedin_search"
+executor = "computer-use-executor"
+payload = "Open LinkedIn jobs search with the manager-provided keywords/location/filters and report result count plus first visible candidates."
+
+[[workflow.gui_tasks]]
+name = "capture_linkedin_job_detail"
+executor = "computer-use-executor"
+payload = "Select a candidate and read detail pane fields: title, company, location, work mode, job type, Easy Apply button, and requirements."
+
+[[workflow.gui_tasks]]
+name = "open_linkedin_easy_apply"
+executor = "computer-use-executor"
+payload = "Click Easy Apply/快速申请 only to open the modal; report required fields, prefilled contact info, resume selector/upload controls, and blocker fields."
+
+[[workflow.gui_tasks]]
+name = "upload_linkedin_resume"
+executor = "computer-use-executor"
+payload = "Upload the manager-provided DOC/DOCX/PDF under LinkedIn's 2MB limit only after all required contact/data-transmission confirmations are satisfied; stop after attachment is selected."
+
+[[workflow.gui_tasks]]
+name = "advance_to_linkedin_resume_step"
+executor = "computer-use-executor"
+payload = "After confirmed contact fields are completed, proceed to the Resume step and report selected PDF, download button, radio selection, and Upload resume control."
+
+[[workflow.gui_tasks]]
+name = "capture_linkedin_additional_questions"
+executor = "computer-use-executor"
+payload = "Read subsequent Easy Apply required questions and current values; do not answer unconfirmed questions."
+
+[[workflow.gui_tasks]]
+name = "handoff_before_linkedin_submit"
+executor = "computer-use-executor"
+payload = "Navigate to the final review page and report all selected answers/files; do not click Submit application without action-time confirmation."

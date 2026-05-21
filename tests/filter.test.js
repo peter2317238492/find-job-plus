@@ -2,6 +2,8 @@ const test = require("node:test");
 const assert = require("node:assert/strict");
 
 const {
+  evaluateTargetStartMonth,
+  hasConflictingStartMonth,
   isJobAllowed,
   parseActivityDays,
   parseSalaryRange,
@@ -147,6 +149,27 @@ test("isJobAllowed requires internship jobs in Shanghai or Suzhou starting in Ju
       },
       rules
     ),
+    { allowed: true, reasons: [] }
+  );
+
+  assert.deepEqual(
+    isJobAllowed(
+      {
+        title: "前端开发实习生",
+        company: "靠谱科技",
+        location: "苏州工业园区",
+        description: "2026年7月可到岗，连续实习3个月以上。",
+      },
+      rules
+    ),
     { allowed: false, reasons: ["不匹配目标开始时间: 2026-06"] }
   );
+});
+
+test("target start month evaluation only rejects explicit conflicts", () => {
+  assert.equal(evaluateTargetStartMonth("2026年6月可入职", "2026-06"), true);
+  assert.equal(evaluateTargetStartMonth("6月 2026 可开始实习", "2026-06"), true);
+  assert.equal(evaluateTargetStartMonth("尽快到岗，连续实习3个月以上", "2026-06"), null);
+  assert.equal(evaluateTargetStartMonth("2026年7月可入职", "2026-06"), false);
+  assert.equal(hasConflictingStartMonth("2026年七月可开始实习", "2026", 6), true);
 });

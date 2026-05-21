@@ -84,6 +84,150 @@ test("agent team filters jobs before resume optimization and application sending
   ]);
 });
 
+test("agent team routes GUI platform operations through the executor", async () => {
+  const queued = [];
+  const team = new JobApplicationAgentTeam({
+    platforms: {
+      boss: {
+        name: "boss",
+        startUrl: "url",
+        async login() {
+          return { ok: true };
+        },
+        async getNextJob() {
+          return {
+            id: "boss-1",
+            title: "前端开发实习生",
+            company: "靠谱科技",
+            location: "上海",
+            description: "2026年6月可开始实习，React 项目。",
+            salary: "200-300元/天",
+          };
+        },
+        async submitApplication(job) {
+          return { ok: true, jobId: job.id };
+        },
+        async checkMessages() {
+          return [];
+        },
+      },
+    },
+    resumeStore: { async load() { return "React 简历"; } },
+    llm: {
+      async generateResumePatch({ job }) {
+        queued.push(`llm:${job.id}`);
+        return { summary: "React 项目", resumeText: "React 项目" };
+      },
+      async generateGreeting() {
+        return "您好，我可在2026年6月开始实习。";
+      },
+    },
+    config: {
+      filters: {
+        allowedCities: ["上海"],
+        requiredInternship: true,
+        targetStartMonth: "2026-06",
+      },
+      limits: { maxApplicationsPerRun: 1 },
+    },
+    guiExecutor: {
+      async enqueue(task) {
+        queued.push(`gui:${task.operation}`);
+        return task.run();
+      },
+    },
+  });
+
+  const result = await team.runOnce("boss");
+
+  assert.equal(result.status, "applied");
+  assert.deepEqual(queued, [
+    "gui:login",
+    "gui:getNextJob",
+    "llm:boss-1",
+    "gui:submitApplication",
+  ]);
+});
+
+test("agent team renders a tailored resume for accepted jobs only", async () => {
+  const rendered = [];
+  const jobs = [
+    {
+      id: "boss-1",
+      title: "前端驻场实习生",
+      company: "外包公司",
+      location: "上海",
+      description: "2026年6月可开始实习，驻场。",
+      salary: "200-300元/天",
+    },
+    {
+      id: "boss-2",
+      title: "前端开发实习生",
+      company: "靠谱科技",
+      location: "上海",
+      description: "2026年6月可开始实习，React 项目。",
+      salary: "200-300元/天",
+    },
+  ];
+  const team = new JobApplicationAgentTeam({
+    platforms: {
+      boss: {
+        name: "boss",
+        startUrl: "url",
+        async login() {},
+        async getNextJob() {
+          return jobs.shift() || null;
+        },
+        async submitApplication() {
+          return { ok: true };
+        },
+        async discardCurrentJob() {},
+        async checkMessages() {
+          return [];
+        },
+      },
+    },
+    resumeStore: { async load() { return "React 简历"; } },
+    llm: {
+      async generateResumePatch({ job }) {
+        return { summary: `summary:${job.id}`, resumeText: "resume" };
+      },
+      async generateGreeting({ job }) {
+        return `greeting:${job.id}`;
+      },
+    },
+    resumeRenderer: {
+      async render({ job, resumePatch }) {
+        rendered.push(job.id);
+        return {
+          typstPath: `/tmp/${job.id}.typ`,
+          pdfPath: `/tmp/${job.id}.pdf`,
+          compileStatus: { ok: true },
+          resumePatch,
+        };
+      },
+    },
+    config: {
+      filters: {
+        allowedCities: ["上海"],
+        requiredInternship: true,
+        targetStartMonth: "2026-06",
+        blockedKeywords: ["驻场"],
+      },
+      limits: { maxApplicationsPerRun: 1 },
+    },
+  });
+
+  const results = await team.run(["boss"]);
+
+  assert.deepEqual(
+    results.map((result) => result.status),
+    ["skipped", "applied", "limit_reached", "no_messages"]
+  );
+  assert.deepEqual(rendered, ["boss-2"]);
+  assert.equal(results[1].resumePatch.typstPath, "/tmp/boss-2.typ");
+});
+
 test("agent team skips rejected jobs without calling the LLM", async () => {
   let llmCalls = 0;
   let discarded = 0;
@@ -232,6 +376,71 @@ test("agent team keeps scanning jobs until the application limit is reached", as
   );
   assert.deepEqual(submitted, ["boss-2", "boss-3"]);
   assert.equal(loginCount, 1);
+});
+
+test("agent team reports prepared applications without incrementing send limit", async () => {
+  const jobs = [
+    {
+      id: "boss-1",
+      title: "前端开发实习生",
+      company: "靠谱科技",
+      location: "上海",
+      description: "2026年6月可开始实习。",
+      salary: "200-300元/天",
+    },
+    null,
+  ];
+  const logs = [];
+
+  const team = new JobApplicationAgentTeam({
+    platforms: {
+      boss: {
+        name: "boss",
+        startUrl: "url",
+        async login() {},
+        async getNextJob() {
+          return jobs.shift();
+        },
+        async submitApplication(job) {
+          return { ok: true, jobId: job.id, status: "awaiting_user_action" };
+        },
+        async checkMessages() {
+          return [];
+        },
+      },
+    },
+    resumeStore: { async load() { return "resume"; } },
+    llm: {
+      async generateResumePatch({ job }) {
+        return { summary: `summary:${job.id}`, resumeText: "resume" };
+      },
+      async generateGreeting({ job }) {
+        return `greeting:${job.id}`;
+      },
+    },
+    config: {
+      filters: {
+        allowedCities: ["上海", "苏州"],
+        requiredInternship: true,
+        targetStartMonth: "2026-06",
+      },
+      limits: { maxApplicationsPerRun: 1 },
+    },
+    eventSink: (event) => {
+      if (event.type === "log") {
+        logs.push(event.message);
+      }
+    },
+  });
+
+  const results = await team.run(["boss"]);
+
+  assert.deepEqual(
+    results.map((result) => result.status),
+    ["prepared", "no_job", "no_messages"]
+  );
+  assert.equal(team.applicationCount, 0);
+  assert.match(logs[0], /等待用户确认投递/);
 });
 
 test("agent team routes new messages to the chat agent", async () => {

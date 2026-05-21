@@ -8,6 +8,10 @@ test("loadConfig reads internship target filters from environment", () => {
     TARGET_START_MONTH: process.env.TARGET_START_MONTH,
     MAX_APPLICATIONS_PER_RUN: process.env.MAX_APPLICATIONS_PER_RUN,
     LINKEDIN_PROFILE_URL: process.env.LINKEDIN_PROFILE_URL,
+    TAILORED_RESUME_DIR: process.env.TAILORED_RESUME_DIR,
+    TYPST_TEMPLATE_DIR: process.env.TYPST_TEMPLATE_DIR,
+    ENABLE_RESUME_PDF: process.env.ENABLE_RESUME_PDF,
+    TYPST_BIN: process.env.TYPST_BIN,
   };
 
   process.env.ALLOWED_CITIES = "上海,苏州";
@@ -15,6 +19,10 @@ test("loadConfig reads internship target filters from environment", () => {
   process.env.TARGET_START_MONTH = "2026-06";
   process.env.MAX_APPLICATIONS_PER_RUN = "500";
   process.env.LINKEDIN_PROFILE_URL = "https://www.linkedin.com/in/example/";
+  process.env.TAILORED_RESUME_DIR = "/tmp/resumes";
+  process.env.TYPST_TEMPLATE_DIR = "/tmp/template";
+  process.env.ENABLE_RESUME_PDF = "true";
+  process.env.TYPST_BIN = "typst-test";
 
   delete require.cache[require.resolve("../src/config")];
   const { loadConfig } = require("../src/config");
@@ -25,6 +33,10 @@ test("loadConfig reads internship target filters from environment", () => {
   assert.equal(config.filters.targetStartMonth, "2026-06");
   assert.equal(config.limits.maxApplicationsPerRun, 500);
   assert.equal(config.linkedin.profileUrl, "https://www.linkedin.com/in/example/");
+  assert.equal(config.tailoredResume.outputDir, "/tmp/resumes");
+  assert.equal(config.tailoredResume.templateDir, "/tmp/template");
+  assert.equal(config.tailoredResume.compilePdf, true);
+  assert.equal(config.tailoredResume.typstBin, "typst-test");
 
   for (const [key, value] of Object.entries(previous)) {
     if (value === undefined) {

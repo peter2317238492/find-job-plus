@@ -9,6 +9,13 @@ const DEFAULT_CONFIG = {
   baseURL: process.env.OPENAI_BASE_URL || "https://api.openai.com/v1",
   apiKey: process.env.OPENAI_API_KEY || "",
   resumePath: process.env.RESUME_PATH || resolveDefaultResumePath(),
+  tailoredResume: {
+    enabled: process.env.TAILORED_RESUME_ENABLED !== "false",
+    outputDir: process.env.TAILORED_RESUME_DIR || path.join(process.cwd(), "generated", "resumes"),
+    templateDir: process.env.TYPST_TEMPLATE_DIR || path.join(process.cwd(), "Chinese-Resume-in-Typst-main"),
+    compilePdf: process.env.ENABLE_RESUME_PDF === "true",
+    typstBin: process.env.TYPST_BIN || "typst",
+  },
   filters: {
     minSalaryK: Number(process.env.MIN_SALARY_K || 0),
     maxSalaryK: Number(process.env.MAX_SALARY_K || 999),
@@ -70,6 +77,10 @@ function loadConfig(overrides = {}) {
     linkedin: {
       ...DEFAULT_CONFIG.linkedin,
       ...(overrides.linkedin || {}),
+    },
+    tailoredResume: {
+      ...DEFAULT_CONFIG.tailoredResume,
+      ...(overrides.tailoredResume || {}),
     },
   };
 }

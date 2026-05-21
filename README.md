@@ -1,104 +1,180 @@
-## Find Job Plus
+# Find Job Plus
 
-Find Job Plus 是一个本地运行的求职 Agent Team。当前版本已把平台适配层从浏览器驱动改为 Chrome 控制抽象：代码不再创建自动化浏览器实例，而是把 Boss 直聘、牛客网、LinkedIn 的操作表达为可由 Codex Chrome 插件或人工接管执行的真实点击、输入、滚动和确认步骤。
+Find Job Plus 是一个本地运行的求职 Agent Team，用来辅助筛选岗位、定制简历、生成沟通文案，并把 Boss 直聘、牛客网、LinkedIn 等平台上的高风险页面操作统一停在人工确认点。
 
-### 架构
+当前实现的重点不是“无人值守自动投递”，而是一个可审计、可测试、可人工接管的求职工作流：
 
-| 模块 | 责任 |
+- 先用确定性规则过滤岗位，再调用 LLM 和简历渲染；
+- 只基于本地简历生成岗位匹配内容，不编造经历；
+- 浏览器点击、上传、发送、保存资料等 GUI 写操作统一进入单一队列；
+- 投递、发消息、上传简历、保存 LinkedIn 公开资料前保留人工确认；
+- 没有 OpenAI API Key 时会使用本地模板助手，方便离线开发和测试。
+
+## 当前能力
+
+| 能力 | 状态 |
 | --- | --- |
-| `main.js` | CLI 入口，加载配置、平台注册表、LLM 和本地 GUI。 |
-| `src/agents/agentTeam.js` | 协调登录、职位读取、过滤、简历优化、投递、消息回复、空闲浏览和 LinkedIn 资料维护。 |
-| `src/agents/jobFilter.js` | 在 LLM 和投递前执行确定性过滤：薪资、活跃度、城市、实习、屏蔽关键词和公司黑名单。 |
-| `src/platforms_chrome/baseChromeAdapter.js` | Chrome 控制抽象、人工登录/确认接管点、脚本化测试控制器。 |
-| `src/platforms_chrome/bossChromeAdapter.js` | Boss 直聘登录、职位列表解析、立即沟通和消息输入流程。 |
-| `src/platforms_chrome/nowcoderChromeAdapter.js` | 牛客网登录、职位列表解析、申请职位和留言流程。 |
-| `src/platforms_chrome/linkedinAdapter.js` | LinkedIn 登录、个人资料草稿生成后的资料维护流程。 |
-| `src/platforms/*.js` | 兼容旧导入路径，转发到 Chrome 版适配器。 |
-| `src/llm/openaiClient.js` | OpenAI 兼容 LLM 封装，负责简历摘要、问候语、聊天回复、市场总结和 LinkedIn 草稿。 |
-| `src/resumeStore.js` | 从 `RESUME_PATH` 读取本地文本或 PDF 简历。 |
-| `src/gui/server.js` | 本地 Web 控制台，显示活跃平台、URL、当前操作、命令和日志。 |
+| Boss 直聘岗位读取与投递准备 | 支持登录提示、搜索页打开、可见文本解析、岗位过滤、问候语生成，最终停在人工沟通/发送前 |
+| 牛客网岗位读取与投递准备 | 支持登录提示、职位页解析、申请前确认，layout note 记录了简历下拉框和附件上传流程 |
+| LinkedIn 资料维护 | 支持根据本地简历生成 headline、about、skills 草稿，并在保存公开资料前确认 |
+| 简历读取 | 支持 UTF-8 文本简历和 PDF 简历 |
+| 定制简历 | 支持生成 Typst 文件，可选调用本地 `typst` 编译 PDF |
+| 本地控制台 | `--gui` 启动 Web 控制台，查看平台、URL、当前 Agent、GUI 队列和日志 |
+| 测试 | 使用 Node.js 内置 test runner，覆盖过滤、平台解析、Agent 编排、GUI 队列、简历渲染和 Codex 配置 |
 
-### 安全边界
+## 架构
 
-- 不绕过验证码、安全检查、登录认证或平台风控；出现这些页面时暂停，让用户在 Chrome 中手动完成。
-- 不保存 LinkedIn 用户名、密码、验证码或 Cookie；LinkedIn 使用浏览器已有会话或运行时手动登录。
-- 投递简历、发送消息、保存 LinkedIn 资料属于对第三方产生影响的操作，真实执行前应由用户确认。
-- 职位过滤在 LLM 调用和投递前执行，减少无效沟通。
-- 简历和 LinkedIn 草稿只基于本地简历生成，不编造经历，不写入手机号、证件号、住址等敏感字段。
+| 路径 | 说明 |
+| --- | --- |
+| `main.js` | CLI 入口，加载配置、LLM、简历、平台注册表、GUI 队列和本地控制台 |
+| `src/config.js` | 环境变量配置、默认简历路径、Codex OpenAI 配置读取 |
+| `src/agents/agentTeam.js` | 主编排器：登录、取岗位、过滤、生成简历与问候语、排队执行 GUI 任务 |
+| `src/agents/jobFilter.js` | 确定性过滤：薪资、城市、实习、开始时间、活跃度、屏蔽关键词、公司黑名单 |
+| `src/llm/openaiClient.js` | OpenAI 兼容 LLM 封装，以及无 API Key 时的模板助手 |
+| `src/resumeStore.js` | 从文本或 PDF 加载本地简历 |
+| `src/resume/*` | 简历定制、Typst 转义、Typst/PDF 渲染 |
+| `src/platforms_chrome/*` | Boss、牛客、LinkedIn 的 Chrome 控制抽象和可见文本解析 |
+| `src/platforms/*` | 兼容旧导入路径，转发到 Chrome 版适配器 |
+| `src/gui/taskQueue.js` | GUI 任务队列，默认并发为 1，支持优先级、重试和事件流 |
+| `src/gui/computerUseExecutor.js` | GUI 执行边界：只执行排队任务，不做策略规划 |
+| `src/gui/server.js` | 本地 Web 控制台 |
+| `.codex/agents/*.toml` | 项目内 Codex subagent 定义 |
+| `.codex/teams/*.toml` | Boss、牛客、LinkedIn 的非 GUI team preset |
+| `.codex/skills/resume-typst` | 定制中文简历并渲染 Typst/PDF 的项目 skill |
+| `application-kit/site-layouts/*.md` | 三个平台的页面结构、投递流程、最终停点和 GUI 原子任务记录 |
 
-### 安装
+## 安装
 
 ```bash
 npm install
 ```
 
-macOS 上进行真实网页操作时，需要 Chrome 和 Codex Chrome 插件。首次使用请先在 Chrome 中登录 Boss 直聘、牛客网和 LinkedIn，或在运行中按提示扫码/手动登录。
+PDF 简历解析依赖 `pdf-parse`，已在 `package.json` 中声明。若要把 Typst 编译为 PDF，需要本机额外安装 `typst` 命令行工具，并设置 `ENABLE_RESUME_PDF=true`。
 
-### 配置
+## 配置
 
 常用环境变量：
 
 ```bash
 export OPENAI_API_KEY=你的_API_Key
 export OPENAI_BASE_URL=https://api.openai.com/v1
-export RESUME_PATH=./简历基本信息.txt
+
+export RESUME_PATH=./在线简历.pdf
+export TAILORED_RESUME_ENABLED=true
+export TAILORED_RESUME_DIR=./generated/resumes
+export TYPST_TEMPLATE_DIR=./Chinese-Resume-in-Typst-main
+export ENABLE_RESUME_PDF=false
+export TYPST_BIN=typst
+
 export MIN_SALARY_K=15
 export MAX_SALARY_K=35
 export ACTIVE_WITHIN_DAYS=3
 export BLOCKED_KEYWORDS=外包,外派,驻场
+export BLOCKED_COMPANIES=
 export ALLOWED_CITIES=上海,苏州
 export REQUIRED_INTERNSHIP=true
 export TARGET_START_MONTH=2026-06
 export MAX_APPLICATIONS_PER_RUN=20
+
 export LINKEDIN_PROFILE_URL=https://www.linkedin.com/in/your-profile/
+export GUI_PORT=3210
 ```
 
-没有 `OPENAI_API_KEY` 时会使用本地模板生成问候语和 LinkedIn 草稿，便于离线测试。
+配置说明：
 
-### 运行
+- `RESUME_PATH` 未设置时，优先读取项目根目录下的 `简历基本信息.txt`，否则读取 `在线简历.pdf`。
+- `OPENAI_API_KEY` 未设置时，会使用模板助手生成简历摘要、问候语和 LinkedIn 草稿。
+- `loadCodexOpenAIConfig()` 会尝试读取 `~/.codex/config.toml` 的 OpenAI base URL 和 `~/.codex/auth.json` 的 API Key，命令行环境变量优先级更高。
+- `TAILORED_RESUME_ENABLED=false` 可关闭岗位定制 Typst 简历生成。
 
-运行 Boss：
+## 运行
+
+默认运行 Boss：
+
+```bash
+npm start
+```
+
+指定平台：
 
 ```bash
 npm start -- --platforms=boss
-```
-
-运行 Boss 和牛客：
-
-```bash
+npm start -- --platforms=nowcoder
 npm start -- --platforms=boss,nowcoder
-```
-
-维护 LinkedIn 个人资料：
-
-```bash
 npm start -- --platforms=linkedin
 ```
 
-同时运行投递和 LinkedIn 维护：
-
-```bash
-npm start -- --platforms=boss,nowcoder,linkedin --gui
-```
-
-本地 GUI：
+启动本地控制台：
 
 ```bash
 npm start -- --platforms=boss --gui
 ```
 
-默认地址是 `http://127.0.0.1:3210`，可通过 `GUI_PORT` 修改。
+控制台默认地址：
 
-### 真实执行流程
+```text
+http://127.0.0.1:3210
+```
 
-1. 启动命令后，平台适配器打开目标页面。
-2. 如果未登录或出现安全验证，脚本暂停，用户在 Chrome 中完成扫码、登录或验证。
-3. 适配器读取页面可见文本并解析职位卡片，`jobFilter` 先过滤不合适职位。
-4. 对通过过滤的职位，LLM 生成简历摘要和问候语。
-5. 平台适配器点击职位、打开沟通或投递入口、输入问候语。
-6. 对真实发送、投递、LinkedIn 保存等最终动作，保留人工确认点。
+## 运行流程
 
-### 测试
+1. `main.js` 读取配置、简历、LLM、平台注册表和 GUI 队列。
+2. `JobApplicationAgentTeam` 按平台顺序运行。
+3. 平台适配器打开起始页；如果未登录或遇到安全验证，提示用户在 Chrome 中手动完成。
+4. 适配器读取页面可见文本并解析岗位卡片。
+5. `jobFilter` 在 LLM 调用和投递准备前过滤不匹配岗位。
+6. 通过过滤后，系统读取本地简历，生成岗位简历 patch 和问候语。
+7. 启用简历渲染时，生成定制 `.typ`；若 `ENABLE_RESUME_PDF=true`，再调用 `typst compile` 输出 PDF。
+8. 平台提交动作会作为 GUI 任务进入 `GuiTaskQueue`。
+9. Boss、牛客的真实投递/发送动作返回 `awaiting_user_action`，最终由用户在页面上确认。
+10. 每个平台结束后会检查消息；开启 `IDLE_BROWSING_ENABLED=true` 时，可做市场浏览摘要。
+
+## Chrome 与 GUI 边界
+
+`src/platforms_chrome/baseChromeAdapter.js` 定义了 Chrome 控制抽象。默认 `ManualChromeController` 只记录并提示应执行的页面动作，测试中使用 `createScriptedChromeController()` 注入页面文本和操作记录。
+
+真正会影响第三方平台的动作必须通过 `computer-use-executor` 边界执行，包括：
+
+- 点击申请、立即沟通、继续沟通、开聊、Submit application；
+- 上传简历或选择附件简历；
+- 输入或发送 recruiter 消息；
+- 填写手机号、微信号、地址、签证状态等个人信息；
+- 保存 LinkedIn headline、about、skills 等公开资料。
+
+这些动作默认应停在确认点，不绕过验证码、安全检查、登录认证或平台风控。
+
+## 平台备注
+
+Boss 直聘：
+
+- 起始页为 `https://www.zhipin.com/`。
+- 搜索 URL 会根据实习、目标开始时间和单一城市生成。
+- 附件简历和最终沟通流程见 `application-kit/site-layouts/boss-zhipin.md`。
+- 当前提交实现会打开岗位页并提示用户人工核对后发送。
+
+牛客网：
+
+- 起始页为 `https://www.nowcoder.com/jobs/recommend`。
+- 可解析职位卡中的标题、公司、地点、薪资和描述。
+- 附件简历入口记录在 `选择投递简历` 下拉框中，详见 `application-kit/site-layouts/nowcoder.md`。
+- 当前提交实现会打开岗位页并提示用户人工核对后投递。
+
+LinkedIn：
+
+- 当前注册为 `profile-maintenance` 平台，不通过 `agentTeam` 自动投递岗位。
+- 会根据本地简历生成公开资料草稿，并检查页面现有文本，避免重复添加。
+- 资料保存前必须人工确认。
+
+## 安全原则
+
+- 不保存平台密码、验证码、Cookie 或浏览器凭据。
+- 不绕过验证码、安全验证、风控页或登录流程。
+- 不自动执行最终投递、发送消息、上传私有简历、保存公开资料。
+- 不在简历、问候语、LinkedIn 草稿中编造学历、公司、项目、技能、证书、指标或日期。
+- 涉及联系方式、个人身份信息、地址、签证状态等字段时，必须由用户确认后再填写。
+- 定制简历和生成 PDF 属于私人数据，默认只保存在本地。
+
+## 测试
 
 ```bash
 npm test
@@ -106,12 +182,19 @@ npm test
 
 测试覆盖：
 
-- 职位过滤、薪资解析和活跃度解析；
-- Boss/牛客页面文本解析；
-- Agent Team 过滤后才调用 LLM 和投递；
-- LinkedIn 资料维护生命周期；
-- LinkedIn 草稿去重和技能提取；
-- GUI 状态和 HTML 渲染；
-- `.codex/agents/*.toml` 必填字段。
+- 薪资、活跃度、城市、实习和目标开始时间过滤；
+- Boss/牛客可见文本解析；
+- LinkedIn profile patch 规划和去重；
+- LLM 缺省模板助手；
+- 本地文本/PDF 简历读取；
+- Typst 简历渲染和转义；
+- Agent Team 编排、投递上限、消息回复、市场摘要、LinkedIn 资料维护；
+- GUI 任务队列串行化、优先级和状态事件；
+- `.codex/agents`、`.codex/teams`、layout notes 和 `resume-typst` skill 的结构。
 
-端到端真实投递需要 macOS + Chrome + Codex 插件 + 用户登录会话，不能在纯单元测试中自动完成。
+## 开发提示
+
+- 新增平台时，优先实现 `login()`、`getNextJob()`、`submitApplication()`、`checkMessages()`，并接入 `createPlatformRegistry()`。
+- 页面解析尽量基于可见文本和可测试的纯函数，便于用 scripted controller 单测。
+- 任何真实 GUI 写操作都应排入 `GuiTaskQueue`，不要在非 GUI worker 中直接操作页面。
+- 修改简历生成逻辑时，保持“只使用源简历可支持信息”的约束，并补充测试。

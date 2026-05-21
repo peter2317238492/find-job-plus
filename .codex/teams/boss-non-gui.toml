@@ -1,0 +1,67 @@
+name = "boss-non-gui"
+description = "Boss Zhipin preset for planning, visible-text parsing, screening, resume tailoring, and recruiter-message drafting while delegating every Boss GUI action to computer-use-executor."
+platforms = ["boss"]
+gui = false
+agents = [
+  "manager-agent",
+  "platform-agent",
+  "job-filter-agent",
+  "resume-agent",
+  "chat-agent",
+  "idle-market-agent",
+]
+
+[queue]
+executor = "computer-use-executor"
+policy = "all_browser_and_upload_actions_must_be_enqueued"
+concurrency = 1
+
+[workflow]
+layout_note = "application-kit/site-layouts/boss-zhipin.md"
+candidate_goal = "2026-06 start, Shanghai/Suzhou internship, truthful fit against 在线简历.pdf"
+final_action_policy = "stop before 立即沟通/继续沟通/开聊 or any recruiter message send"
+
+[[workflow.roles]]
+agent = "manager-agent"
+responsibility = "Turn the user goal into Boss-specific search, screening, resume, upload, and recruiter-message tasks; enqueue every browser action for computer-use-executor."
+
+[[workflow.roles]]
+agent = "platform-agent"
+responsibility = "Parse Boss detail/list visible text into normalized job fields: title, company, recruiter, salary, city, weekly days, internship duration, description, and upload/send button labels."
+
+[[workflow.roles]]
+agent = "job-filter-agent"
+responsibility = "Reject non-internship, non-Shanghai/Suzhou, explicit start-date conflicts, blocked keywords such as 外包/外派/驻场, inactive recruiters, or salary/location mismatches."
+
+[[workflow.roles]]
+agent = "resume-agent"
+responsibility = "Generate a Boss-tailored resume patch and short attachment filename; preserve only claims supported by 在线简历.pdf."
+
+[[workflow.roles]]
+agent = "chat-agent"
+responsibility = "Draft the initial Boss greeting and risk-confirmation questions, especially when the display company differs from the branded employer in the title."
+
+[[workflow.gui_tasks]]
+name = "open_boss_target"
+executor = "computer-use-executor"
+payload = "Open Boss tab or URL, wait for detail/search page, report security/login blockers."
+
+[[workflow.gui_tasks]]
+name = "capture_boss_visible_job"
+executor = "computer-use-executor"
+payload = "Read visible job title, salary, location, recruiter, company card, description, and all apply/upload button labels; no clicking final communication buttons."
+
+[[workflow.gui_tasks]]
+name = "check_boss_attachment_state"
+executor = "computer-use-executor"
+payload = "Open the 简历 new hover menu or /web/geek/resume page, read 附件管理 file names and file count, and report whether the target PDF is already present."
+
+[[workflow.gui_tasks]]
+name = "upload_boss_attachment"
+executor = "computer-use-executor"
+payload = "Click 附件上传/上传附件简历 from the resume menu or attachment manager, choose the short PDF path provided by manager-agent, confirm attachment only, and stop after upload success."
+
+[[workflow.gui_tasks]]
+name = "handoff_before_boss_chat"
+executor = "computer-use-executor"
+payload = "Position the page at 立即沟通/继续沟通/开聊 and report readiness; do not click or send without action-time confirmation."

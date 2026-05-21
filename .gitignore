@@ -1,2 +1,6 @@
 /node_modules/
 /个人简历.pdf
+/application-kit/target-internship/*
+!/application-kit/target-internship/site-layout-notes.md
+/Chinese-Resume-in-Typst-main/
+/generated/

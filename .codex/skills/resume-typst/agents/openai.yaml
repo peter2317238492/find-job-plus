@@ -1,0 +1,8 @@
+interface:
+  display_name: "Resume Typst"
+  short_description: "Tailor Chinese resumes and render Typst/PDF outputs"
+  default_prompt: "Use $resume-typst to tailor my resume for this job and generate a Typst/PDF version."
+  brand_color: "#26267D"
+
+policy:
+  allow_implicit_invocation: true

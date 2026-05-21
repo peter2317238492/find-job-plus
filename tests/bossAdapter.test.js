@@ -9,6 +9,7 @@ const {
   parseBossListCardText,
   resolveBossReturnUrl,
 } = require("../src/platforms/boss");
+const { createScriptedChromeController } = require("../src/platforms_chrome/baseChromeAdapter");
 
 test("Boss adapter builds a search URL for internship target cities", () => {
   assert.equal(
@@ -103,4 +104,29 @@ test("Boss adapter recognizes official security verification pages", () => {
     false
   );
   assert.equal(isBossSecurityUrl("data:,"), false);
+});
+
+test("Boss adapter stops before final send and asks for user confirmation", async () => {
+  let prompt = null;
+  const controller = createScriptedChromeController();
+  const adapter = createBossAdapter({
+    controller,
+    promptForHuman: async (payload) => {
+      prompt = payload;
+    },
+    humanDelayRangeMs: [0, 0],
+  });
+
+  const result = await adapter.submitApplication(
+    { id: "boss-1", title: "算法实习生", url: "https://www.zhipin.com/job_detail/1.html" },
+    { greeting: "您好，我可在2026年6月开始实习。", resumePatch: { summary: "算法项目经历" } }
+  );
+
+  assert.equal(result.status, "awaiting_user_action");
+  assert.equal(prompt.platform, "boss");
+  assert.match(prompt.message, /手动点击沟通并发送/);
+  assert.deepEqual(
+    controller.transcript.map((entry) => entry.action),
+    ["openPage"]
+  );
 });

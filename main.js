@@ -4,6 +4,9 @@ const { createJobAssistant } = require("./src/llm/openaiClient");
 const { createPlatformRegistry } = require("./src/platforms");
 const { ResumeStore } = require("./src/resumeStore");
 const { createGuiServer } = require("./src/gui/server");
+const { ComputerUseExecutor } = require("./src/gui/computerUseExecutor");
+const { GuiTaskQueue } = require("./src/gui/taskQueue");
+const { TypstResumeRenderer } = require("./src/resume/typstResumeRenderer");
 
 async function main() {
   const codexOpenAI = await loadCodexOpenAIConfig();
@@ -32,13 +35,28 @@ async function main() {
   });
   console.log(`OpenAI config: apiKey=${config.apiKey ? "loaded" : "missing"}, baseURL=${config.baseURL}`);
   const resumeStore = new ResumeStore({ resumePath: config.resumePath });
+  const eventSink = gui ? (event) => gui.applyEvent(event) : undefined;
+  const guiTaskQueue = new GuiTaskQueue({
+    executor: new ComputerUseExecutor(),
+    eventSink: eventSink || (() => {}),
+  });
+  const resumeRenderer = config.tailoredResume.enabled
+    ? new TypstResumeRenderer({
+        outputDir: config.tailoredResume.outputDir,
+        templateDir: config.tailoredResume.templateDir,
+        compilePdf: config.tailoredResume.compilePdf,
+        typstBin: config.tailoredResume.typstBin,
+      })
+    : null;
 
   const team = new JobApplicationAgentTeam({
     platforms: registry.all(),
     resumeStore,
     llm,
     config,
-    eventSink: gui ? (event) => gui.applyEvent(event) : undefined,
+    eventSink,
+    guiExecutor: guiTaskQueue,
+    resumeRenderer,
   });
 
   const results = await team.run(platformNames);

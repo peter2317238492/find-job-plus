@@ -86,17 +86,21 @@ class BossChromeAdapter extends BaseChromeAdapter {
 
   async submitApplication(job, outreach) {
     await this.openJob(job);
-    await this.clickByText(["立即沟通", "继续沟通", "开聊", "沟通"], { optional: false });
-    await this.waitLikeHuman();
-    await this.typeText(outreach.greeting, { multiline: false });
-    await this.waitLikeHuman();
-    await this.clickByText(["发送", "Send"], { optional: true });
+    await this.promptForHuman({
+      title: "Boss application confirmation required",
+      message:
+        `已为该 Boss 岗位准备好问候语，请在 Chrome 中人工核对岗位、简历摘要和消息内容后手动点击沟通并发送。\n\n${outreach.greeting}`,
+      platform: this.name,
+      job,
+      outreach,
+    });
 
     return {
       ok: true,
       platform: "boss",
       jobId: job.id,
       sentText: outreach.greeting,
+      status: "awaiting_user_action",
     };
   }
 

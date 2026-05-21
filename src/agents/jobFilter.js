@@ -96,7 +96,8 @@ function isJobAllowed(job, rules = {}) {
     reasons.push("不是实习岗位");
   }
 
-  if (rules.targetStartMonth && !matchesTargetStartMonth(text, rules.targetStartMonth)) {
+  const startMonthDecision = evaluateTargetStartMonth(text, rules.targetStartMonth);
+  if (startMonthDecision === false) {
     reasons.push(`不匹配目标开始时间: ${rules.targetStartMonth}`);
   }
 
@@ -138,11 +139,19 @@ function matchesInternship(text) {
 }
 
 function matchesTargetStartMonth(text, targetStartMonth) {
+  return evaluateTargetStartMonth(text, targetStartMonth) === true;
+}
+
+function evaluateTargetStartMonth(text, targetStartMonth) {
+  if (!targetStartMonth) {
+    return null;
+  }
+
   const [year, monthText] = String(targetStartMonth).split("-");
   const month = Number(monthText);
 
   if (!year || !month) {
-    return false;
+    return null;
   }
 
   const monthPattern = month === 6 ? "(?:6|06|六)" : `(?:${month}|${String(month).padStart(2, "0")})`;
@@ -153,10 +162,61 @@ function matchesTargetStartMonth(text, targetStartMonth) {
     `${monthPattern}\\s*月[^。；;\\n]{0,16}${year}[^。；;\\n]{0,16}(?:可)?(?:入职|到岗|开始|实习)`
   );
 
-  return yearMonthPattern.test(text) || monthYearPattern.test(text);
+  if (yearMonthPattern.test(text) || monthYearPattern.test(text)) {
+    return true;
+  }
+
+  if (hasConflictingStartMonth(text, year, month)) {
+    return false;
+  }
+
+  return null;
+}
+
+function hasConflictingStartMonth(text, targetYear, targetMonth) {
+  const candidates = [
+    ...String(text || "").matchAll(
+      /(\d{4})\s*(?:年|[-/.])\s*(\d{1,2}|一|二|三|四|五|六|七|八|九|十|十一|十二)\s*(?:月)?[^。；;\n]{0,16}(?:可)?(?:入职|到岗|开始|实习)/g
+    ),
+    ...String(text || "").matchAll(
+      /(\d{1,2}|一|二|三|四|五|六|七|八|九|十|十一|十二)\s*月[^。；;\n]{0,16}(\d{4})[^。；;\n]{0,16}(?:可)?(?:入职|到岗|开始|实习)/g
+    ),
+  ];
+
+  return candidates.some((match) => {
+    const first = match[1];
+    const second = match[2];
+    const year = first.length === 4 ? first : second;
+    const month = first.length === 4 ? normalizeMonth(second) : normalizeMonth(first);
+    return year && month && (year !== targetYear || month !== targetMonth);
+  });
+}
+
+function normalizeMonth(value) {
+  const numeric = Number(value);
+  if (Number.isFinite(numeric) && numeric >= 1 && numeric <= 12) {
+    return numeric;
+  }
+
+  return {
+    一: 1,
+    二: 2,
+    三: 3,
+    四: 4,
+    五: 5,
+    六: 6,
+    七: 7,
+    八: 8,
+    九: 9,
+    十: 10,
+    十一: 11,
+    十二: 12,
+  }[value];
 }
 
 module.exports = {
+  evaluateTargetStartMonth,
+  hasConflictingStartMonth,
   isJobAllowed,
   matchesAllowedCity,
   matchesInternship,
