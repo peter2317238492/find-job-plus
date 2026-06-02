@@ -4,3 +4,70 @@
 !/application-kit/target-internship/site-layout-notes.md
 /Chinese-Resume-in-Typst-main/
 /generated/
+/.worktrees/
+/my-experience/
+/resumes/
+/resume-actions.png
+/*简历*.pdf
+/*简历*.docx
+/*简历*.txt
+
+# Local secrets and credentials
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+auth.json
+credentials.json
+secrets.json
+tokens.json
+
+# Browser/session state
+cookies.json
+session*.json
+storage-state*.json
+.playwright/
+.playwright-mcp/
+playwright/.auth/
+browser-state/
+
+# Personal resume/profile files, recursive
+*简历*.pdf
+*简历*.docx
+*简历*.txt
+*[Rr]esume*.pdf
+*[Rr]esume*.docx
+*[Rr]esume*.txt
+profile.json
+resume.raw.txt
+
+# Screenshots and captures
+screenshots/
+captures/
+*截图*.png
+*截图*.jpg
+*[Ss]creenshot*.png
+*[Ss]creenshot*.jpg
+*[Ss]creen*.png
+
+# Private job-search data
+/投递方向库/
+/私有投递方向库/
+applications/
+applied-jobs/
+job-leads/
+job-notes/
+target-jobs/
+target-companies/
+
+# Logs and local dumps
+logs/
+*.log
+*.sqlite
+*.sqlite3
+*.db
+llm-dumps/
+chat-logs/
