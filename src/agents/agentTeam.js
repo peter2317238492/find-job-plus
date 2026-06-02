@@ -354,7 +354,10 @@ class JobApplicationAgentTeam {
     if (rendered) {
       Object.assign(resumePatch, {
         typstPath: rendered.typstPath,
+        texPath: rendered.texPath,
         pdfPath: rendered.pdfPath,
+        workspaceDir: rendered.workspaceDir,
+        renderer: rendered.renderer,
         compileStatus: rendered.compileStatus,
       });
     }

@@ -34,7 +34,7 @@ responsibility = "Reject non-internship/full-time-only postings, location mismat
 
 [[workflow.roles]]
 agent = "resume-agent"
-responsibility = "Generate LinkedIn-tailored resume patches and PDF filenames for Easy Apply; never add unsupported technologies or credentials."
+responsibility = "Generate LinkedIn-tailored resume patches and PDF filenames for Easy Apply; never add unsupported technologies or credentials. Default to Typst runtime output; use cv-skill only when the user asks for a full LaTeX resume workflow or RESUME_RENDERER=cv-skill is configured."
 
 [[workflow.roles]]
 agent = "chat-agent"

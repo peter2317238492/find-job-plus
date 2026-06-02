@@ -1,0 +1,31 @@
+# Claim Source Map
+
+| Claim | Source artifact | Source locator | Raw wording or user confirmation | State | Final handling |
+|---|---|---|---|---|---|
+| Candidate name is Jordan Patel. | `examples/inputs/sample-industry-resume.md` | lines 12-17 | `- name: Jordan Patel` | resolved | Used in resume header. |
+| Email is jordan.patel@example.com. | `examples/inputs/sample-industry-resume.md` | lines 12-17 | `- email: jordan.patel@example.com` | resolved | Used in contact line. |
+| Phone is +1 555 010 7712. | `examples/inputs/sample-industry-resume.md` | lines 12-17 | `- phone: +1 555 010 7712` | resolved | Used in contact line. |
+| LinkedIn profile is https://linkedin.com/in/jordanpatel-example. | `examples/inputs/sample-industry-resume.md` | lines 12-17 | `- linkedin: https://linkedin.com/in/jordanpatel-example` | resolved | Used in contact line. |
+| Jordan Patel is a software engineer. | `examples/inputs/sample-industry-resume.md` | lines 19-21 | `Software engineer with experience building backend services, internal tools, and production data workflows.` | resolved | Used in summary. |
+| Jordan Patel has experience building backend services, internal tools, and production data workflows. | `examples/inputs/sample-industry-resume.md` | lines 19-21 | `Software engineer with experience building backend services, internal tools, and production data workflows.` | resolved | Used in summary. |
+| First listed role is Software Engineer at BrightPath Systems. | `examples/inputs/sample-industry-resume.md` | lines 23-27 | `### Software Engineer, BrightPath Systems` | resolved | Used in experience heading. |
+| BrightPath Systems dates are Jul 2022-Present. | `examples/inputs/sample-industry-resume.md` | lines 25-27 | `- dates: Jul 2022-Present` | resolved | Used in experience heading. |
+| BrightPath Systems location is Austin, TX. | `examples/inputs/sample-industry-resume.md` | lines 25-27 | `- location: Austin, TX` | resolved | Used in role line. |
+| Jordan Patel shipped Go and TypeScript services for internal operations tooling. | `examples/inputs/sample-industry-resume.md` | lines 28-32 | `shipped Go and TypeScript services for internal operations tooling` | resolved | Used in BrightPath bullet. |
+| Jordan Patel reduced manual support work by automating CSV-based account update flows. | `examples/inputs/sample-industry-resume.md` | lines 28-32 | `reduced manual support work by automating CSV-based account update flows` | resolved | Used in BrightPath bullet. |
+| Jordan Patel improved API observability with structured logging and dashboard alerts. | `examples/inputs/sample-industry-resume.md` | lines 28-32 | `improved API observability with structured logging and dashboard alerts` | resolved | Used in BrightPath bullet. |
+| BrightPath Systems stack included Go, TypeScript, PostgreSQL, and Docker. | `examples/inputs/sample-industry-resume.md` | lines 28-32 | `- stack: Go, TypeScript, PostgreSQL, Docker` | resolved | Used in BrightPath bullet. |
+| Second listed role is Associate Software Engineer at North Ridge Analytics. | `examples/inputs/sample-industry-resume.md` | lines 34-36 | `### Associate Software Engineer, North Ridge Analytics` | resolved | Used in experience heading. |
+| North Ridge Analytics dates are Jun 2020-Jun 2022. | `examples/inputs/sample-industry-resume.md` | lines 34-36 | `- dates: Jun 2020-Jun 2022` | resolved | Used in experience heading. |
+| North Ridge Analytics location is Dallas, TX. | `examples/inputs/sample-industry-resume.md` | lines 34-36 | `- location: Dallas, TX` | resolved | Used in role line. |
+| Jordan Patel built Python data pipelines for scheduled reporting jobs. | `examples/inputs/sample-industry-resume.md` | lines 37-41 | `built Python data pipelines for scheduled reporting jobs` | resolved | Used in North Ridge bullet. |
+| Jordan Patel migrated legacy scripts into tested services with clearer deployment steps. | `examples/inputs/sample-industry-resume.md` | lines 37-41 | `migrated legacy scripts into tested services with clearer deployment steps` | resolved | Used in North Ridge bullet. |
+| Jordan Patel partnered with analysts to turn recurring spreadsheet work into reusable tools. | `examples/inputs/sample-industry-resume.md` | lines 37-41 | `partnered with analysts to turn recurring spreadsheet work into reusable tools` | resolved | Used in North Ridge bullet. |
+| North Ridge Analytics stack included Python, SQL, and GitHub Actions. | `examples/inputs/sample-industry-resume.md` | lines 37-41 | `- stack: Python, SQL, GitHub Actions` | resolved | Used in North Ridge bullet. |
+| Resume Parser CLI is a project. | `examples/inputs/sample-industry-resume.md` | lines 43-46 | `Resume Parser CLI: personal tool for converting structured resume notes into normalized JSON` | resolved | Used in projects section. |
+| Resume Parser CLI converts structured resume notes into normalized JSON. | `examples/inputs/sample-industry-resume.md` | lines 43-46 | `Resume Parser CLI: personal tool for converting structured resume notes into normalized JSON` | resolved | Used in project bullet. |
+| Incident Notes Search is a project. | `examples/inputs/sample-industry-resume.md` | lines 43-46 | `Incident Notes Search: internal search utility for tagging and retrieving troubleshooting notes` | resolved | Used in projects section. |
+| Incident Notes Search is an internal search utility for tagging and retrieving troubleshooting notes. | `examples/inputs/sample-industry-resume.md` | lines 43-46 | `Incident Notes Search: internal search utility for tagging and retrieving troubleshooting notes` | resolved | Used in project bullet. |
+| Skills include Go, Python, TypeScript, and SQL. | `examples/inputs/sample-industry-resume.md` | lines 48-52 | `- languages: Go, Python, TypeScript, SQL` | resolved | Used in skills section. |
+| Skills include PostgreSQL, Docker, GitHub Actions, and Linux. | `examples/inputs/sample-industry-resume.md` | lines 48-52 | `- tools: PostgreSQL, Docker, GitHub Actions, Linux` | resolved | Used in skills section. |
+| Strengths include backend APIs, automation, debugging, and cross-functional delivery. | `examples/inputs/sample-industry-resume.md` | lines 48-52 | `- strengths: backend APIs, automation, debugging, cross-functional delivery` | resolved | Used in skills section. |

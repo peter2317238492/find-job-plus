@@ -35,7 +35,7 @@ responsibility = "Check city list for Shanghai/Suzhou, internship label, class-y
 
 [[workflow.roles]]
 agent = "resume-agent"
-responsibility = "Create a Nowcoder-tailored Typst/PDF resume and short upload filename; decide whether the attachment should replace the online resume in the dropdown."
+responsibility = "Create a Nowcoder-tailored resume and short upload filename; decide whether the attachment should replace the online resume in the dropdown. Default to Typst runtime output; use cv-skill only when the user asks for a full LaTeX resume workflow or RESUME_RENDERER=cv-skill is configured."
 
 [[workflow.roles]]
 agent = "chat-agent"

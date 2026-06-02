@@ -9,9 +9,12 @@ test("loadConfig reads internship target filters from environment", () => {
     MAX_APPLICATIONS_PER_RUN: process.env.MAX_APPLICATIONS_PER_RUN,
     LINKEDIN_PROFILE_URL: process.env.LINKEDIN_PROFILE_URL,
     TAILORED_RESUME_DIR: process.env.TAILORED_RESUME_DIR,
+    RESUME_RENDERER: process.env.RESUME_RENDERER,
     TYPST_TEMPLATE_DIR: process.env.TYPST_TEMPLATE_DIR,
+    CV_SKILL_ROOT: process.env.CV_SKILL_ROOT,
     ENABLE_RESUME_PDF: process.env.ENABLE_RESUME_PDF,
     TYPST_BIN: process.env.TYPST_BIN,
+    XELATEX_BIN: process.env.XELATEX_BIN,
   };
 
   process.env.ALLOWED_CITIES = "上海,苏州";
@@ -20,9 +23,12 @@ test("loadConfig reads internship target filters from environment", () => {
   process.env.MAX_APPLICATIONS_PER_RUN = "500";
   process.env.LINKEDIN_PROFILE_URL = "https://www.linkedin.com/in/example/";
   process.env.TAILORED_RESUME_DIR = "/tmp/resumes";
+  process.env.RESUME_RENDERER = "cv-skill";
   process.env.TYPST_TEMPLATE_DIR = "/tmp/template";
+  process.env.CV_SKILL_ROOT = "/tmp/cv-skill";
   process.env.ENABLE_RESUME_PDF = "true";
   process.env.TYPST_BIN = "typst-test";
+  process.env.XELATEX_BIN = "xelatex-test";
 
   delete require.cache[require.resolve("../src/config")];
   const { loadConfig } = require("../src/config");
@@ -34,9 +40,12 @@ test("loadConfig reads internship target filters from environment", () => {
   assert.equal(config.limits.maxApplicationsPerRun, 500);
   assert.equal(config.linkedin.profileUrl, "https://www.linkedin.com/in/example/");
   assert.equal(config.tailoredResume.outputDir, "/tmp/resumes");
+  assert.equal(config.tailoredResume.renderer, "cv-skill");
   assert.equal(config.tailoredResume.templateDir, "/tmp/template");
+  assert.equal(config.tailoredResume.cvSkillRoot, "/tmp/cv-skill");
   assert.equal(config.tailoredResume.compilePdf, true);
   assert.equal(config.tailoredResume.typstBin, "typst-test");
+  assert.equal(config.tailoredResume.xelatexBin, "xelatex-test");
 
   for (const [key, value] of Object.entries(previous)) {
     if (value === undefined) {

@@ -7,6 +7,7 @@ const { createGuiServer } = require("./src/gui/server");
 const { ComputerUseExecutor } = require("./src/gui/computerUseExecutor");
 const { GuiTaskQueue } = require("./src/gui/taskQueue");
 const { TypstResumeRenderer } = require("./src/resume/typstResumeRenderer");
+const { CvSkillResumeRenderer } = require("./src/resume/cvSkillResumeRenderer");
 
 async function main() {
   const codexOpenAI = await loadCodexOpenAIConfig();
@@ -40,14 +41,7 @@ async function main() {
     executor: new ComputerUseExecutor(),
     eventSink: eventSink || (() => {}),
   });
-  const resumeRenderer = config.tailoredResume.enabled
-    ? new TypstResumeRenderer({
-        outputDir: config.tailoredResume.outputDir,
-        templateDir: config.tailoredResume.templateDir,
-        compilePdf: config.tailoredResume.compilePdf,
-        typstBin: config.tailoredResume.typstBin,
-      })
-    : null;
+  const resumeRenderer = createResumeRenderer(config.tailoredResume);
 
   const team = new JobApplicationAgentTeam({
     platforms: registry.all(),
@@ -78,6 +72,28 @@ function parsePlatformArgs(args) {
     .filter(Boolean);
 }
 
+function createResumeRenderer(tailoredResume = {}) {
+  if (!tailoredResume.enabled) {
+    return null;
+  }
+
+  if (tailoredResume.renderer === "cv-skill") {
+    return new CvSkillResumeRenderer({
+      outputDir: tailoredResume.outputDir,
+      skillRoot: tailoredResume.cvSkillRoot,
+      compilePdf: tailoredResume.compilePdf,
+      xelatexBin: tailoredResume.xelatexBin,
+    });
+  }
+
+  return new TypstResumeRenderer({
+    outputDir: tailoredResume.outputDir,
+    templateDir: tailoredResume.templateDir,
+    compilePdf: tailoredResume.compilePdf,
+    typstBin: tailoredResume.typstBin,
+  });
+}
+
 if (require.main === module) {
   main().catch((error) => {
     console.error(error);
@@ -86,6 +102,7 @@ if (require.main === module) {
 }
 
 module.exports = {
+  createResumeRenderer,
   main,
   parsePlatformArgs,
 };

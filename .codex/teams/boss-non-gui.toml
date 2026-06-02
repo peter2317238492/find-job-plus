@@ -35,7 +35,7 @@ responsibility = "Reject non-internship, non-Shanghai/Suzhou, explicit start-dat
 
 [[workflow.roles]]
 agent = "resume-agent"
-responsibility = "Generate a Boss-tailored resume patch and short attachment filename; preserve only claims supported by 在线简历.pdf."
+responsibility = "Generate a Boss-tailored resume patch and short attachment filename; preserve only claims supported by 在线简历.pdf. Default to Typst runtime output; use cv-skill only when the user asks for a full LaTeX resume workflow or RESUME_RENDERER=cv-skill is configured."
 
 [[workflow.roles]]
 agent = "chat-agent"

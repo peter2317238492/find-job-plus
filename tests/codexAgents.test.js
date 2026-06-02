@@ -120,6 +120,26 @@ test("resume Typst skill is discoverable and points to the project template", ()
   assert.match(content, /Never invent/);
 });
 
+test("cv-skill package is installed as project skills with a local asset root", () => {
+  const root = path.join(process.cwd(), ".codex", "vendor", "cv-skill");
+  const expectedSkills = [
+    "resume-crafter",
+    "resume-intake-and-extraction",
+    "resume-authoring-and-assembly",
+    "resume-review-and-delivery",
+  ];
+
+  for (const skill of expectedSkills) {
+    const installedPath = path.join(process.cwd(), ".codex", "skills", skill, "SKILL.md");
+    assert.equal(fs.existsSync(installedPath), true, `${skill} project skill is missing`);
+    assert.match(fs.readFileSync(installedPath, "utf8"), new RegExp(`name:\\s*${skill}`));
+  }
+
+  assert.equal(fs.existsSync(path.join(root, "INSTALL.md")), true, "cv-skill root is missing");
+  assert.equal(fs.existsSync(path.join(root, "templates", "common", "resume.cls")), true);
+  assert.equal(fs.existsSync(path.join(root, "templates", "zh", "standard", "resume.tex")), true);
+});
+
 function extractTomlArray(content, key) {
   const inlinePattern = new RegExp(`^${key}\\s*=\\s*\\[([^\\]]*)\\]`, "m");
   const inline = content.match(inlinePattern);

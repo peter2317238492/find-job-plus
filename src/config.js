@@ -11,10 +11,13 @@ const DEFAULT_CONFIG = {
   resumePath: process.env.RESUME_PATH || resolveDefaultResumePath(),
   tailoredResume: {
     enabled: process.env.TAILORED_RESUME_ENABLED !== "false",
+    renderer: process.env.RESUME_RENDERER || "typst",
     outputDir: process.env.TAILORED_RESUME_DIR || path.join(process.cwd(), "generated", "resumes"),
     templateDir: process.env.TYPST_TEMPLATE_DIR || path.join(process.cwd(), "Chinese-Resume-in-Typst-main"),
+    cvSkillRoot: process.env.CV_SKILL_ROOT || path.join(process.cwd(), ".codex", "vendor", "cv-skill"),
     compilePdf: process.env.ENABLE_RESUME_PDF === "true",
     typstBin: process.env.TYPST_BIN || "typst",
+    xelatexBin: process.env.XELATEX_BIN || "xelatex",
   },
   filters: {
     minSalaryK: Number(process.env.MIN_SALARY_K || 0),

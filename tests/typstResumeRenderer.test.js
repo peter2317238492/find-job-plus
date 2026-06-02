@@ -6,6 +6,8 @@ const path = require("node:path");
 
 const { createTailoredResume } = require("../src/resume/resumeTailor");
 const { TypstResumeRenderer } = require("../src/resume/typstResumeRenderer");
+const { CvSkillResumeRenderer } = require("../src/resume/cvSkillResumeRenderer");
+const { createResumeRenderer } = require("../main");
 
 test("tailored resume only keeps skills supported by the source resume", () => {
   const tailored = createTailoredResume({
@@ -49,4 +51,18 @@ test("Typst resume renderer writes escaped typst source and can use an injected 
   assert.match(source, /React \\# Node\.js/);
   assert.equal(result.compileStatus.ok, true);
   assert.match(result.pdfPath, /\.pdf$/);
+});
+
+test("resume renderer factory can select Typst or cv-skill", () => {
+  assert.equal(createResumeRenderer({ enabled: false }), null);
+  assert.equal(createResumeRenderer({ enabled: true }) instanceof TypstResumeRenderer, true);
+  assert.equal(
+    createResumeRenderer({
+      enabled: true,
+      renderer: "cv-skill",
+      outputDir: "/tmp/resumes",
+      cvSkillRoot: "/tmp/cv-skill",
+    }) instanceof CvSkillResumeRenderer,
+    true
+  );
 });
