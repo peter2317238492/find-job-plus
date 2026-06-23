@@ -1,7 +1,8 @@
 function createInitialGuiState() {
   return {
     activePlatform: "",
-    browserUrl: "",
+    computerUseTarget: "",
+    computerUseRequests: [],
     currentOperation: null,
     guiTasks: [],
     commands: [],
@@ -12,7 +13,7 @@ function createInitialGuiState() {
 function applyAgentEvent(state, event) {
   if (event.type === "platform:active") {
     state.activePlatform = event.platform || "";
-    state.browserUrl = event.url || "";
+    state.computerUseTarget = event.url || "";
   }
 
   if (event.type === "agent:operation") {
@@ -35,6 +36,26 @@ function applyAgentEvent(state, event) {
         agent: "computer-use-executor",
         operation: task.operation,
       };
+    }
+  }
+
+  if (event.type === "computer-use:request") {
+    state.computerUseTarget = event.request?.targetUrl || state.computerUseTarget || "";
+    state.computerUseRequests.unshift({
+      at: event.at || new Date().toISOString(),
+      id: event.request?.id || "",
+      platform: event.request?.platform || "",
+      action: event.request?.action || "",
+      targetUrl: event.request?.targetUrl || "",
+      status: "requested",
+    });
+    state.computerUseRequests = state.computerUseRequests.slice(0, 20);
+  }
+
+  if (event.type === "computer-use:result") {
+    const request = state.computerUseRequests.find((entry) => entry.id === event.requestId);
+    if (request) {
+      request.status = event.status || "completed";
     }
   }
 
@@ -102,11 +123,12 @@ function renderDashboardHtml(state) {
       <h2>状态</h2>
       <dl>
         <dt>活跃平台</dt><dd>${escapeHtml(state.activePlatform || "未启动")}</dd>
-        <dt>浏览器窗口</dt><dd>${escapeHtml(state.browserUrl || "未打开")}</dd>
+        <dt>Computer Use 目标</dt><dd>${escapeHtml(state.computerUseTarget || "未请求")}</dd>
         <dt>当前 Agent</dt><dd>${escapeHtml(operation.agent || "空闲")}</dd>
         <dt>当前操作</dt><dd>${escapeHtml(operation.operation || "等待任务")}</dd>
       </dl>
-      <h2 style="margin-top: 20px;">日志</h2>
+      <h2 style="margin-top: 20px;">Computer Use 请求</h2>
+      ${renderComputerUseRequests(state.computerUseRequests)}
       <h2 style="margin-top: 20px;">GUI 队列</h2>
       ${renderGuiTasks(state.guiTasks)}
       <h2 style="margin-top: 20px;">日志</h2>
@@ -126,6 +148,19 @@ function renderGuiTasks(tasks) {
     .map(
       (task) =>
         `<div class="log"><strong>${escapeHtml(task.status)}</strong> ${escapeHtml(task.platform || "")} ${escapeHtml(task.operation || "")}<div class="muted">${escapeHtml(task.at)}</div></div>`
+    )
+    .join("");
+}
+
+function renderComputerUseRequests(requests) {
+  if (!requests.length) {
+    return '<p class="muted">暂无请求</p>';
+  }
+
+  return requests
+    .map(
+      (entry) =>
+        `<div class="log"><strong>${escapeHtml(entry.status)}</strong> ${escapeHtml(entry.platform)} ${escapeHtml(entry.action)}<div class="muted">${escapeHtml(entry.targetUrl || entry.id)} · ${escapeHtml(entry.at)}</div></div>`
     )
     .join("");
 }
@@ -165,5 +200,6 @@ module.exports = {
   applyAgentEvent,
   createInitialGuiState,
   renderDashboardHtml,
+  renderComputerUseRequests,
   renderGuiTasks,
 };

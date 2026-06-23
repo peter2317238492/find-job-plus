@@ -32,3 +32,23 @@ test("platform registry rejects unknown platforms with a useful error", () => {
 
   assert.throws(() => registry.get("unknown"), /Unknown platform: unknown/);
 });
+
+test("platform registry injects the shared computer-use gateway into adapters", async () => {
+  const requests = [];
+  const registry = createPlatformRegistry({
+    computerUse: {
+      async request(request) {
+        requests.push(request);
+        return {};
+      },
+    },
+  });
+
+  await registry.get("boss").login();
+  await registry.get("nowcoder").login();
+
+  assert.deepEqual(
+    requests.map((request) => `${request.platform}:${request.action}`),
+    ["boss:login", "nowcoder:login"]
+  );
+});

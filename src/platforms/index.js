@@ -5,8 +5,18 @@ const { createLinkedInAdapter } = require("../platforms_chrome/linkedinAdapter")
 function createPlatformRegistry(options = {}) {
   const filters = options.filters || {};
   const adapters = {
-    boss: createBossAdapter({ ...options, ...filters, ...(options.boss || {}) }),
-    nowcoder: createNowcoderAdapter({ ...options, ...filters, ...(options.nowcoder || {}) }),
+    boss: createBossAdapter({
+      ...options,
+      ...filters,
+      computerUse: options.computerUse,
+      ...(options.boss || {}),
+    }),
+    nowcoder: createNowcoderAdapter({
+      ...options,
+      ...filters,
+      computerUse: options.computerUse,
+      ...(options.nowcoder || {}),
+    }),
     linkedin: createLinkedInAdapter({ ...options, ...(options.linkedin || {}) }),
   };
 

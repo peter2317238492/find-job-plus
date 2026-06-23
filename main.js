@@ -1,5 +1,6 @@
 const { loadCodexOpenAIConfig, loadConfig } = require("./src/config");
 const { JobApplicationAgentTeam } = require("./src/agents/agentTeam");
+const { createComputerUseGateway } = require("./src/agents/computerUseGateway");
 const { createJobAssistant } = require("./src/llm/openaiClient");
 const { createPlatformRegistry } = require("./src/platforms");
 const { ResumeStore } = require("./src/resumeStore");
@@ -24,9 +25,32 @@ async function main() {
     console.log(`GUI console: ${url}`);
   }
 
+  const eventSink = gui ? (event) => gui.applyEvent(event) : undefined;
+  const guiTaskQueue = new GuiTaskQueue({
+    executor: new ComputerUseExecutor(),
+    eventSink: eventSink || (() => {}),
+  });
+  const computerUse = createComputerUseGateway({
+    eventSink,
+    executor: (request) =>
+      guiTaskQueue.enqueue({
+        id: request.id,
+        platform: request.platform,
+        operation: request.action,
+        target: request.targetUrl,
+        priority: request.action === "login" ? 20 : 10,
+        metadata: request,
+        run: () => {
+          throw new Error(
+            `Computer-use request ${request.id} (${request.platform}:${request.action}) must be handled by computer-use-agent.`
+          );
+        },
+      }),
+  });
   const registry = createPlatformRegistry({
-    browser: config.browser,
+    ...config.filters,
     filters: config.filters,
+    computerUse,
     linkedin: config.linkedin,
   });
   const llm = createJobAssistant({
@@ -36,11 +60,6 @@ async function main() {
   });
   console.log(`OpenAI config: apiKey=${config.apiKey ? "loaded" : "missing"}, baseURL=${config.baseURL}`);
   const resumeStore = new ResumeStore({ resumePath: config.resumePath });
-  const eventSink = gui ? (event) => gui.applyEvent(event) : undefined;
-  const guiTaskQueue = new GuiTaskQueue({
-    executor: new ComputerUseExecutor(),
-    eventSink: eventSink || (() => {}),
-  });
   const resumeRenderer = createResumeRenderer(config.tailoredResume);
 
   const team = new JobApplicationAgentTeam({

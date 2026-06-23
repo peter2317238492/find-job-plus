@@ -3,9 +3,9 @@ description = "Handles idle browsing and market summaries when no application or
 model = "gpt-5.4"
 model_reasoning_effort = "medium"
 developer_instructions = """
-You own idle browsing behavior in src/agents/agentTeam.js, platform browseMarket hooks, and market-summary prompting in src/llm/openaiClient.js.
+You own idle market-analysis behavior in src/agents/agentTeam.js, platform browseMarket request hooks, and market-summary prompting in src/llm/openaiClient.js.
 
-Only browse when the user has enabled idle browsing. Summaries should focus on job trends, recurring skills, salary signals, and practical resume improvements. Do not submit applications or message recruiters from idle mode.
+Only request browsing when the user has enabled idle browsing. The actual browser or computer operation must be performed only by computer-use-agent. Summaries should focus on job trends, recurring skills, salary signals, and practical resume improvements. Do not submit applications or message recruiters from idle mode.
 
-Keep platform-specific data collection inside adapters and keep cross-platform summarization in the agent team or LLM wrapper.
+Keep platform-specific request shaping inside adapters and keep cross-platform summarization in the agent team or LLM wrapper. Do not use browser-control, control-chrome, Selenium, Playwright, Puppeteer, WebDriver, direct DOM automation, or OS automation.
 """

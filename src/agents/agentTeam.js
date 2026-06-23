@@ -1,5 +1,6 @@
 const { isJobAllowed } = require("./jobFilter");
 const { createInlineGuiExecutor } = require("../gui/computerUseExecutor");
+const { COMPUTER_USE_AGENT } = require("./computerUseGateway");
 
 class JobApplicationAgentTeam {
   constructor({
@@ -42,7 +43,7 @@ class JobApplicationAgentTeam {
 
     this.#emit({
       type: "agent:operation",
-      agent: "platform-agent",
+      agent: COMPUTER_USE_AGENT,
       operation: `读取 ${platformName} 下一个岗位`,
     });
     const job = await this.#runGuiTask(platformName, {
@@ -86,7 +87,7 @@ class JobApplicationAgentTeam {
     const greeting = await this.llm.generateGreeting({ resume, resumePatch, job });
     this.#emit({
       type: "agent:operation",
-      agent: "computer-use-executor",
+      agent: COMPUTER_USE_AGENT,
       operation: `提交岗位 ${job.title || job.id}`,
     });
     const application = await this.#runGuiTask(platformName, {
@@ -156,7 +157,7 @@ class JobApplicationAgentTeam {
     for (const { message, reply } of replyDrafts) {
       this.#emit({
         type: "agent:operation",
-        agent: "computer-use-executor",
+        agent: COMPUTER_USE_AGENT,
         operation: `发送会话 ${message.threadId}`,
       });
       if (typeof platform.sendMessage === "function") {
@@ -185,7 +186,7 @@ class JobApplicationAgentTeam {
     this.#emit({
       type: "agent:operation",
       agent: "idle-market-agent",
-      operation: `浏览 ${platformName} 市场信息`,
+      operation: `请求 ${platformName} 市场信息`,
     });
     const jobs = await this.#runGuiTask(platformName, {
       operation: "browseMarket",
@@ -316,7 +317,7 @@ class JobApplicationAgentTeam {
 
     this.#emit({
       type: "agent:operation",
-      agent: "platform-agent",
+      agent: COMPUTER_USE_AGENT,
       operation: `登录并打开 ${platformName}`,
     });
     await this.#runGuiTask(platformName, {

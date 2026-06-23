@@ -9,6 +9,7 @@ const {
   parseBossListCardText,
   resolveBossReturnUrl,
 } = require("../src/platforms/boss");
+const { createBossChromeAdapter } = require("../src/platforms_chrome/bossChromeAdapter");
 const { createScriptedChromeController } = require("../src/platforms_chrome/baseChromeAdapter");
 
 test("Boss adapter builds a search URL for internship target cities", () => {
@@ -23,12 +24,63 @@ test("Boss adapter enters only through the zhipin home page", () => {
     allowedCities: ["上海", "苏州"],
     targetStartMonth: "2026-06",
     requiredInternship: true,
-    driverFactory: async () => {
-      throw new Error("driver should not be created");
+    computerUse: {
+      async request() {
+        throw new Error("computer-use should not be called");
+      },
     },
   });
 
-  assert.equal(adapter.startUrl, "https://www.zhipin.com/");
+  assert.equal(
+    adapter.startUrl,
+    "https://www.zhipin.com/web/geek/jobs?query=%E5%AE%9E%E4%B9%A0%202026%E5%B9%B46%E6%9C%88&city=101020100&industry=&position="
+  );
+});
+
+test("Boss adapter routes login, job reads, submission, and messages through computer-use", async () => {
+  const requests = [];
+  const adapter = createBossAdapter({
+    computerUse: {
+      async request(request) {
+        requests.push(request);
+        if (request.action === "read-next-job") {
+          return {
+            job: {
+              title: "前端实习生",
+              company: "靠谱科技",
+              salary: "200-300元/天",
+              description: "React 实习",
+            },
+          };
+        }
+        if (request.action === "check-messages") {
+          return { messages: [{ threadId: "t-1", text: "方便聊聊吗？" }] };
+        }
+        return { ok: true, sentText: request.input?.greeting || request.input?.text || "" };
+      },
+    },
+  });
+
+  await adapter.login();
+  const job = await adapter.getNextJob();
+  await adapter.submitApplication(job, { greeting: "您好", resumePatch: { summary: "React" } });
+  const messages = await adapter.checkMessages();
+  await adapter.sendMessage("t-1", "可以");
+
+  assert.deepEqual(
+    requests.map((request) => request.action),
+    ["login", "read-next-job", "submit-application", "check-messages", "send-message"]
+  );
+  assert.equal(requests.every((request) => request.platform === "boss"), true);
+  assert.equal(job.id, "boss-1");
+  assert.equal(job.title, "前端实习生");
+  assert.deepEqual(messages, [{ threadId: "t-1", text: "方便聊聊吗？" }]);
+});
+
+test("Boss adapter refuses browser work without a computer-use gateway", async () => {
+  const adapter = createBossAdapter();
+
+  await assert.rejects(() => adapter.login(), /computer-use-agent/);
 });
 
 test("Boss adapter returns to the search page after blank login redirects", () => {
@@ -106,10 +158,10 @@ test("Boss adapter recognizes official security verification pages", () => {
   assert.equal(isBossSecurityUrl("data:,"), false);
 });
 
-test("Boss adapter stops before final send and asks for user confirmation", async () => {
+test("Boss Chrome adapter stops before final send and asks for user confirmation", async () => {
   let prompt = null;
   const controller = createScriptedChromeController();
-  const adapter = createBossAdapter({
+  const adapter = createBossChromeAdapter({
     controller,
     promptForHuman: async (payload) => {
       prompt = payload;

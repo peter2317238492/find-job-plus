@@ -7,7 +7,7 @@ const {
   renderDashboardHtml,
 } = require("../src/gui/state");
 
-test("GUI state records active platform, browser URL, operation, and logs", () => {
+test("GUI state records active platform, computer-use target, operation, and logs", () => {
   const state = createInitialGuiState();
 
   applyAgentEvent(state, {
@@ -27,7 +27,7 @@ test("GUI state records active platform, browser URL, operation, and logs", () =
   });
 
   assert.equal(state.activePlatform, "boss");
-  assert.equal(state.browserUrl, "https://www.zhipin.com/web/geek/job-recommend");
+  assert.equal(state.computerUseTarget, "https://www.zhipin.com/web/geek/job-recommend");
   assert.deepEqual(state.currentOperation, {
     agent: "job-filter-agent",
     operation: "过滤岗位 前端开发",
@@ -66,8 +66,22 @@ test("dashboard HTML includes command input, active window, operation, and log a
   });
   applyAgentEvent(state, {
     type: "agent:operation",
-    agent: "platform-agent",
+    agent: "computer-use-agent",
     operation: "读取牛客岗位",
+  });
+  applyAgentEvent(state, {
+    type: "computer-use:request",
+    request: {
+      id: "computer-use-1",
+      platform: "nowcoder",
+      action: "read-next-job",
+      targetUrl: "https://www.nowcoder.com/jobs/recommend",
+    },
+  });
+  applyAgentEvent(state, {
+    type: "computer-use:result",
+    requestId: "computer-use-1",
+    status: "completed",
   });
   applyAgentEvent(state, {
     type: "log",
@@ -81,7 +95,9 @@ test("dashboard HTML includes command input, active window, operation, and log a
   assert.match(html, /name="command"/);
   assert.match(html, /nowcoder/);
   assert.match(html, /https:\/\/www\.nowcoder\.com\/jobs\/recommend/);
-  assert.match(html, /platform-agent/);
+  assert.match(html, /computer-use-agent/);
+  assert.match(html, /read-next-job/);
+  assert.match(html, /completed/);
   assert.match(html, /读取牛客岗位/);
   assert.match(html, /GUI 队列/);
   assert.match(html, /牛客选择器需要校准/);

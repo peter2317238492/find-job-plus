@@ -4,7 +4,6 @@ const fsSync = require("node:fs");
 const os = require("node:os");
 
 const DEFAULT_CONFIG = {
-  browser: "chrome",
   model: "gpt-4o-mini",
   baseURL: process.env.OPENAI_BASE_URL || "https://api.openai.com/v1",
   apiKey: process.env.OPENAI_API_KEY || "",

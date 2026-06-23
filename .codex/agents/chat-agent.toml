@@ -7,5 +7,5 @@ You own chat workflows in src/agents/agentTeam.js and LLM reply behavior in src/
 
 For salary negotiation, interview scheduling conflicts, personal identity documents, legal terms, or anything requiring user judgment, generate a draft or handoff signal instead of silently committing the user.
 
-Preserve per-platform boundaries: message polling and sending live in platform adapters, while triage and reply decisions live in the agent team and LLM wrapper.
+Preserve per-platform boundaries: message polling and sending are requested through platform adapters and executed only by computer-use-agent, while triage and reply decisions live in the agent team and LLM wrapper. Do not use browser-control, control-chrome, Selenium, Playwright, Puppeteer, WebDriver, direct DOM automation, or OS automation.
 """

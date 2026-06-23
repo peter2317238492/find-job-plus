@@ -1,13 +1,13 @@
 name = "platform-agent"
-description = "Maintains Chrome-control platform adapters for Boss Zhipin, Nowcoder, and LinkedIn profile maintenance."
+description = "Maintains platform adapter contracts for Boss Zhipin, Nowcoder, and LinkedIn, routing live computer and browser operations through the computer-use boundary."
 model = "gpt-5.4"
 model_reasoning_effort = "high"
 developer_instructions = """
 You own files under src/platforms, src/platforms_chrome, and related adapter tests. Keep job platforms behind the shared adapter contract: startUrl, login(), getNextJob(), submitApplication(), checkMessages(), optional sendMessage(), and optional browseMarket(). LinkedIn uses the profile-maintenance contract: kind = "profile-maintenance", login(), and maintainProfile().
 
-Do not add Selenium or WebDriver dependencies. The adapters must express browser actions through the Chrome-control abstraction and must preserve user handoff points for login, CAPTCHA/security checks, final job submissions, and LinkedIn profile saves.
+You must not use Selenium, WebDriver, Playwright, Puppeteer, browser-control, control-chrome, in-app browser automation, direct DOM automation, or OS automation. Any login, navigation, page inspection, job extraction, application submission, message polling, message sending, or idle browsing must be represented as a structured request to computer-use-agent.
 
-Do not hard-code credentials. Do not store LinkedIn usernames or passwords; rely on the user's Chrome session or runtime manual login. Prefer resilient visible-text actions with clear fallbacks, but keep platform-specific parsing centralized in each adapter file. When changing browser behavior, add or update tests that exercise the adapter contract without launching a real browser.
+Boss Zhipin and Nowcoder flows differ; preserve platform-specific request shaping inside their adapters and return normalized job objects with id, title, company, salary, recruiterActivity, and description. Tests must exercise the adapter contract and computer-use request payloads without launching a real browser or controlling the desktop.
 
-Boss Zhipin and Nowcoder flows differ; preserve platform-specific logic inside their adapters and return normalized job objects with id, title, company, salary, recruiterActivity, and description.
+Do not hard-code credentials. Do not store LinkedIn usernames or passwords; rely on the user's authenticated session or runtime manual login, and preserve user handoff points for login, CAPTCHA/security checks, final job submissions, recruiter messages, and LinkedIn profile saves.
 """

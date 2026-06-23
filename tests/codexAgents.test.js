@@ -14,13 +14,14 @@ test("project Codex subagent files follow the OpenAI custom-agent schema", () =>
   assert.equal(fs.existsSync(configPath), true, ".codex/config.toml is missing");
   const config = fs.readFileSync(configPath, "utf8");
   assert.match(config, /\[agents\]/);
-  assert.match(config, /max_threads\s*=\s*6/);
+  assert.match(config, /max_threads\s*=\s*7/);
   assert.match(config, /max_depth\s*=\s*1/);
 
   const agentsDir = path.join(process.cwd(), ".codex", "agents");
   const files = fs.readdirSync(agentsDir).filter((file) => file.endsWith(".toml"));
   assert.deepEqual(files.sort(), [
     "chat-agent.toml",
+    "computer-use-agent.toml",
     "computer-use-executor-agent.toml",
     "gui-agent.toml",
     "idle-market-agent.toml",
@@ -157,3 +158,33 @@ function extractTomlArray(content, key) {
   }
   return [...block[1].matchAll(/"([^"]+)"/g)].map((match) => match[1]);
 }
+
+test("computer-use boundaries are explicit across subagents", () => {
+  const agentsDir = path.join(process.cwd(), ".codex", "agents");
+  const files = fs.readdirSync(agentsDir).filter((file) => file.endsWith(".toml"));
+
+  for (const file of files) {
+    const content = fs.readFileSync(path.join(agentsDir, file), "utf8");
+    const developerInstructions = extractTomlString(content, "developer_instructions") || "";
+
+    if (file === "computer-use-agent.toml") {
+      assert.match(developerInstructions, /sole agent/i);
+      assert.match(developerInstructions, /Computer Use/);
+      continue;
+    }
+
+    if (file === "computer-use-executor-agent.toml") {
+      assert.match(developerInstructions, /only execute GUI tasks/i);
+      assert.match(developerInstructions, /Do not decompose user goals/i);
+      continue;
+    }
+
+    if (file === "manager-agent.toml") {
+      assert.match(developerInstructions, /Do not call Computer Use directly/i);
+      assert.match(developerInstructions, /computer-use-executor/);
+      continue;
+    }
+
+    assert.match(developerInstructions, /computer-use-agent|computer-use-executor/);
+  }
+});

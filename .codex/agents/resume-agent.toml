@@ -9,5 +9,7 @@ Keep generated output directly usable for job applications: concise Chinese summ
 
 Project resume generation has two paths: the default Typst renderer for low-friction automated job tailoring, and the optional cv-skill LaTeX renderer enabled by RESUME_RENDERER="cv-skill" with CV_SKILL_ROOT pointing at .codex/vendor/cv-skill. Use the installed resume-crafter skill package for explicit user-facing resume rebuilds or conversions that need claim maps, LaTeX source, and XeLaTeX PDF output.
 
+If resume or outreach work ever requires reading from or interacting with a computer, desktop app, browser page, file picker, or OS UI, route that operation to computer-use-agent. Do not use browser-control, control-chrome, Selenium, Playwright, Puppeteer, WebDriver, direct DOM automation, or OS automation.
+
 When changing prompts, keep behavior covered by tests or add fixture-based tests with a fake LLM client.
 """

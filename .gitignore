@@ -1,4 +1,5 @@
 /node_modules/
+/.DS_Store
 /个人简历.pdf
 /application-kit/target-internship/*
 !/application-kit/target-internship/site-layout-notes.md
@@ -52,6 +53,13 @@ captures/
 *[Ss]creenshot*.png
 *[Ss]creenshot*.jpg
 *[Ss]creen*.png
+*.jpeg
+*.webp
+*.mp4
+*.mov
+*.mkv
+*.webm
+recordings/
 
 # Private job-search data
 /投递方向库/
@@ -69,5 +77,10 @@ logs/
 *.sqlite
 *.sqlite3
 *.db
+*.sql
+*.dump
+*.bak
+dumps/
+db-dumps/
 llm-dumps/
 chat-logs/

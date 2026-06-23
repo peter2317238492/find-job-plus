@@ -38,8 +38,10 @@ test("cv-skill renderer creates a traceable LaTeX resume workspace", async () =>
 
   assert.equal(result.renderer, "cv-skill");
   assert.match(result.workspaceDir, /20260521-nowcoder-nowcoder-1/);
-  assert.match(result.texPath, /output\/resume\.tex$/);
-  assert.match(result.pdfPath, /output\/resume\.pdf$/);
+  assert.equal(path.basename(result.texPath), "resume.tex");
+  assert.equal(path.basename(path.dirname(result.texPath)), "output");
+  assert.equal(path.basename(result.pdfPath), "resume.pdf");
+  assert.equal(path.basename(path.dirname(result.pdfPath)), "output");
 
   const source = await fs.readFile(result.texPath, "utf8");
   const claimMap = await fs.readFile(path.join(result.workspaceDir, "work", "claim-source-map.md"), "utf8");
